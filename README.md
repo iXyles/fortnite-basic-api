@@ -2,6 +2,7 @@
 Basic Fortnite API for stats and sever status built with async/await
 
 Inspired by other repos about Fortnite API's as:
+
 https://github.com/SzymonLisowiec/node-epicgames-client
 https://github.com/qlaffont/fortnite-api
 
