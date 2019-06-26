@@ -8,7 +8,4 @@ module.exports = {
   // Resources
   Endpoints: require('./resources/Endpoints'),
 
-  // Enums
-  EInputType: require('./enums/InputTypes'),
-
 };
