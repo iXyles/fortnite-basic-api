@@ -6,11 +6,12 @@ const Requester = require('../Requester.js');
 const Converter = require('../Converter');
 
 module.exports = class Client {
-  constructor(creds) {
-    this.email = creds.email || undefined;
-    this.password = creds.password || undefined;
-    this.launcherToken = creds.launcherToken || undefined;
-    this.fortniteToken = creds.fortniteToken || undefined;
+  constructor(args) {
+    this.email = args.email || undefined;
+    this.password = args.password || undefined;
+    this.launcherToken = args.launcherToken || undefined;
+    this.fortniteToken = args.fortniteToken || undefined;
+    this.seasonStartTime = args.seasonStartTime || '1557388800'; // S9 EPOCH
 
     if (!this.email || !this.password || !this.launcherToken || !this.fortniteToken) {
       throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
@@ -244,7 +245,7 @@ module.exports = class Client {
     // Request all the stats
     const promises = [];
     promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.auths.accessToken}`));
-    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}?startTime=1`, `bearer ${this.auths.accessToken}`));
+    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.seasonStartTime}`, `bearer ${this.auths.accessToken}`));
     const result = await Promise.all(promises);
 
     if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.` };
