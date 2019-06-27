@@ -221,12 +221,12 @@ module.exports = class Client {
     promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/weekly`, `bearer ${this.auths.accessToken}`));
     const result = await Promise.all(promises);
 
-    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.` };
+    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };
 
     const lifetime = Converter.convertV1(result[0]);
     const season = Converter.convertV1(result[1]);
 
-    return { lifetime, season };
+    return { lifetime, season, user: account };
   }
 
   /**
@@ -248,12 +248,12 @@ module.exports = class Client {
     promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.seasonStartTime}`, `bearer ${this.auths.accessToken}`));
     const result = await Promise.all(promises);
 
-    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.` };
+    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };
 
     const lifetime = Converter.convertV2(result[0]);
     const season = Converter.convertV2(result[1]);
 
-    return { lifetime, season };
+    return { lifetime, season, user: account };
   }
 
   /**
