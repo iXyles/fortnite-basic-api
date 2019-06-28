@@ -1,5 +1,13 @@
 const GameModes = require('../../enums/GameModes');
 
+/**
+ * Custom string splitter to add rest of the string back
+ * if the limit is shorter than full split
+ * @param {string} str The string to split
+ * @param {string} separator The seperator to split the string with
+ * @param {number} limit Number of splits with the separator
+ * @returns {array} Array of strings of the split
+ */
 function stringSplit(str, separator, limit) {
   const split = str.split(separator);
 
@@ -154,7 +162,7 @@ module.exports = class Converter {
 
   /**
    * Assign `winrate, kdr, killsPerMatch` to the `obj` input
-   * @param {objectt} obj The JSON Objec that shall be used for assigning
+   * @param {object} obj The JSON Objec that shall be used for assigning
    * the extra variables to the object.
    */
   static assignExtraStats(obj) {
@@ -178,8 +186,8 @@ module.exports = class Converter {
 
   /**
    * Calculates the WIN ratio of (wins/games)
-   * @param {*} a The amount of won games
-   * @param {*} b The amount of total played games
+   * @param {string|number} a The amount of won games
+   * @param {string|number} b The amount of total played games
    * @returns {number} The win rate % with 2 decimals
    */
   static winrate(a, b) {
