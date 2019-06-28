@@ -142,7 +142,7 @@ module.exports = class Client {
     this.auths.accessToken = undefined;
 
     const data = {
-      rant_type: 'refresh_token',
+      grant_type: 'refresh_token',
       refresh_token: this.auths.refreshToken,
       includePerms: true,
     };
