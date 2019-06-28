@@ -137,8 +137,8 @@ module.exports = class Client {
   async refreshToken() {
     if (!this.auths.refreshToken) return { error: 'Cannot refresh the token due to no refreshToken set.' };
 
-    // eslint-disable-next-line max-len
-    // remove it so the "checkToken()" can validated if it was successful or not if several requests are made.
+    // remove it so the "checkToken()" can validated
+    // if it was successful or not if several requests are made.
     this.auths.accessToken = undefined;
 
     const data = {
@@ -150,9 +150,9 @@ module.exports = class Client {
     const refresh = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.fortniteToken}`, data, undefined, true);
 
     if (refresh.error) return { success: false, error: refresh.error };
-    if (refresh.code) {
+    if (refresh.access_token) {
       this.setAuthData(refresh); // Setup tokens from refresh
-      return { success: true, code: refresh.code };
+      return { success: true };
     }
     return { error: `[refreshToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
   }
