@@ -213,7 +213,7 @@ module.exports = class Client {
     if (!check.tokenValid) return check;
 
     const account = await this.accountLookup(user);
-    if (account.error || !account.id) return { error: 'Cannot retrieve stats since the input account does not exist' };
+    if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
 
     // Request all the stats
     const promises = [];
@@ -240,7 +240,7 @@ module.exports = class Client {
     if (!check.tokenValid) return check;
 
     const account = await this.accountLookup(user);
-    if (account.error || !account.id) return { error: 'Cannot retrieve stats since the input account does not exist' };
+    if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
 
     // Request all the stats
     const promises = [];
