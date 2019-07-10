@@ -1,6 +1,6 @@
 {
   "name": "fortnite-basic-api",
-  "version": "1.0.3",
+  "version": "1.0.3.1",
   "description": "basic fortnite api and other things, supporting both v1 and v2, using request-promises",
   "main": "index.js",
   "scripts": {
@@ -13,6 +13,14 @@
     "promises",
     "v1 & v2"
   ],
+  "homepage": "https://github.com/iXyles/fortnite-basic-api",
+  "bugs": {
+		"url": "https://github.com/iXyles/fortnite-basic-api/issues"
+	},
+  "repository": {
+		"type": "git",
+		"url": "https://github.com/iXyles/fortnite-basic-api.git"
+	},
   "author": {
     "name": "iXyles"
   },
