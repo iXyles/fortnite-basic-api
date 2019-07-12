@@ -1,5 +1,5 @@
 # fortnite-basic-api
-Basic Fortnite API for stats and sever status built with async/await
+Basic Fortnite API for stats and server status built with async/await
 
 Inspired by other repos about Fortnite API's as:
 
