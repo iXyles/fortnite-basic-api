@@ -166,8 +166,10 @@ module.exports = class Converter {
    * the extra variables to the object.
    */
   static assignExtraStats(obj) {
-    const winrate = Number(this.winrate(obj.placetop1, obj.matchesplayed));
-    const kdr = Number(this.ratio(obj.kills, (obj.matchesplayed - obj.placetop1)));
+    if (!obj.placetop1) Object.assign(obj, { placetop1: 0 });
+    if (!obj.kills) Object.assign(obj, { kills: 0 });
+    const winrate = Number(this.winrate(obj.placetop, obj.matchesplayed));
+    const kdr = Number(this.ratio(obj.kills, obj.matchesplayed - obj.placetop1));
     const killsPerMatch = Number(this.ratio(obj.kills, obj.matchesplayed));
     Object.assign(obj, { winrate, kdr, killsPerMatch });
   }
