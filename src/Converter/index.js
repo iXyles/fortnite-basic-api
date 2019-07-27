@@ -39,6 +39,8 @@ module.exports = class Converter {
     // parse the default data so it's more 'readable'
     Object.keys(data).forEach((index) => {
       const row = data[index];
+
+      if (!row.name) return; // random return of "null" from epic endpoint.
       const parts = row.name.split('_');
 
       // the needeed parts - Easier to see what is what.
