@@ -1,6 +1,6 @@
 {
   "name": "fortnite-basic-api",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "basic fortnite api and other things, supporting both v1 and v2, using request-promises",
   "main": "index.js",
   "scripts": {

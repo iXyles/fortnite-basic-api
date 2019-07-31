@@ -11,8 +11,7 @@ module.exports = class Client {
     this.password = args.password || undefined;
     this.launcherToken = args.launcherToken || undefined;
     this.fortniteToken = args.fortniteToken || undefined;
-    this.seasonStartTime = args.seasonStartTime || '1557388800'; // S9 EPOCH
-
+    this.seasonStartTime = args.seasonStartTime || '1564657200'; // S10 EPOCH
     if (!this.email || !this.password || !this.launcherToken || !this.fortniteToken) {
       throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
     }
