@@ -66,14 +66,37 @@ module.exports = class Client {
    * @returns {object} JSON Object of result
    */
   async getOAuthToken() {
+    await this.requester.sendGet(Endpoints.CSRF_TOKEN, undefined, undefined, undefined, false);
+    this.xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
+
+    if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
+
     const dataAuth = {
-      grant_type: 'password',
-      username: this.email,
+      email: this.email,
       password: this.password,
-      includePerms: true,
+      rememberMe: true,
     };
 
-    const res = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.launcherToken}`, dataAuth, undefined, true);
+    const headers = {
+      'x-xsrf-token': this.xsrf.value,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+
+    const login = await this.requester.sendPost(Endpoints.API_LOGIN,
+      undefined, dataAuth, headers, true);
+    if (login && login.error) return login;
+
+    const exchange = await this.requester.sendGet(Endpoints.API_EXCHANGE_CODE,
+      undefined, undefined, { 'x-xsrf-token': this.xsrf.value }, false);
+
+    const exchangeData = {
+      grant_type: 'exchange_code',
+      exchange_code: exchange.code,
+      includePerms: true,
+      token_type: 'eg1',
+    };
+
+    const res = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.launcherToken}`, exchangeData, headers, true);
 
     if (res.error || res.access_token) return res;
     return { error: `[getOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
