@@ -18,5 +18,11 @@ module.exports = Object.freeze({
   STATS_BR_V1: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/stats/accountId',
   STATS_BR_V2: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/statsv2/account',
   SERVER_STATUS: 'https://lightswitch-public-service-prod06.ol.epicgames.com/lightswitch/api/service/bulk/status?serviceId=Fortnite',
+  BR_STORE: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/storefront/v2/catalog',
+  BR_NEWS: 'https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game',
+  EVENT_FLAGS: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/calendar/v1/timeline',
+
+  // STW
+  PVE_INFO: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/game/v2/world/info',
 
 });

@@ -1,4 +1,5 @@
 const exitHook = require('async-exit-hook');
+const readline = require('readline');
 
 const Endpoints = require('../../resources/Endpoints');
 const Requester = require('../Requester.js');
@@ -62,28 +63,41 @@ module.exports = class Client {
   }
 
   /**
-   * Get OAuth for from Epic Launcher
+   * Perform login and get the OAuth token for the launcher
    * @returns {object} JSON Object of result
    */
-  async getOAuthToken() {
+  async getOAuthToken(twoStep = false, method) {
     await this.requester.sendGet(Endpoints.CSRF_TOKEN, undefined, undefined, undefined, false);
     this.xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
 
     if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
-
-    const dataAuth = {
-      email: this.email,
-      password: this.password,
-      rememberMe: true,
-    };
 
     const headers = {
       'x-xsrf-token': this.xsrf.value,
       'Content-Type': 'application/x-www-form-urlencoded',
     };
 
-    const login = await this.requester.sendPost(Endpoints.API_LOGIN,
+    const code = twoStep ? await Client.consolePrompt('Two factor detected, write the 6 number code from 2FA: ') : '';
+
+    const dataAuth = twoStep
+      ? {
+        code,
+        method,
+        rememberDevice: false,
+      }
+      : {
+        email: this.email,
+        password: this.password,
+        rememberMe: true,
+      };
+
+    const login = await this.requester.sendPost(Endpoints.API_LOGIN + (twoStep ? '/mfa' : ''),
       undefined, dataAuth, headers, true);
+
+    if (login && login.error && login.error.metadata && login.error.metadata.twoFactorMethod) {
+      return this.getOAuthToken(true, login.error.metadata.twoFactorMethod);
+    }
+
     if (login && login.error) return login;
 
     const exchange = await this.requester.sendGet(Endpoints.API_EXCHANGE_CODE,
@@ -292,6 +306,56 @@ module.exports = class Client {
   }
 
   /**
+   * Get the current store of BR
+   * @param {string} language for result (fr, de, es, zh, it, ja, en)
+   * default language is set to english
+   * @returns {object} JSON Object of the result
+   */
+  async getBRNews(language = 'en') {
+    const check = await this.checkToken();
+    if (!check.tokenValid) return check;
+
+    const headers = {
+      'X-EpicGames-Language': language,
+    };
+
+    return this.requester.sendGet(Endpoints.BR_NEWS, `bearer ${this.auths.accessToken}`, undefined, headers);
+  }
+
+  /**
+   * Get the current store of BR
+   * @returns {object} JSON Object of the result
+   */
+  async getBRStore() {
+    const check = await this.checkToken();
+    if (!check.tokenValid) return check;
+
+    return this.requester.sendGet(Endpoints.BR_STORE, `bearer ${this.auths.accessToken}`);
+  }
+
+  /**
+   * Get the current PVE Information
+   * @returns {object} JSON Object of the result
+   */
+  async getPVEInfo() {
+    const check = await this.checkToken();
+    if (!check.tokenValid) return check;
+
+    return this.requester.sendGet(Endpoints.PVE_INFO, `bearer ${this.auths.accessToken}`);
+  }
+
+  /**
+   * Get the current event flags of Battle Royale Mode
+   * @returns {object} JSON Object of the result
+   */
+  async getBREventFlags() {
+    const check = await this.checkToken();
+    if (!check.tokenValid) return check;
+
+    return this.requester.sendGet(Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
+  }
+
+  /**
    * Kill the current running session of the `Client`
    * @returns {object} Object of result
    */
@@ -311,5 +375,17 @@ module.exports = class Client {
    */
   static isDisplayName(value) {
     return value && typeof value === 'string' && value.length >= 3 && value.length <= 16;
+  }
+
+  static consolePrompt(query) {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    return new Promise(resolve => rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    }));
   }
 };
