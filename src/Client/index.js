@@ -315,11 +315,7 @@ module.exports = class Client {
     const check = await this.checkToken();
     if (!check.tokenValid) return check;
 
-    const headers = {
-      'X-EpicGames-Language': language,
-    };
-
-    return this.requester.sendGet(Endpoints.BR_NEWS, `bearer ${this.auths.accessToken}`, undefined, headers);
+    return this.requester.sendGet(`${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.auths.accessToken}`);
   }
 
   /**

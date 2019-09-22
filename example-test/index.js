@@ -23,7 +23,7 @@ const client = new Client({
     client.getV2Stats('96afefcb12e14e7fa1bcfab1189eae55'),
 
     client.getServerStatus(),
-    client.getBRNews('en'), // insert a different language code if wanted
+    client.getBRNews('es'), // insert a different language code if wanted
     client.getBRStore(),
     client.getPVEInfo(),
     client.getBREventFlags(),
