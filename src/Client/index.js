@@ -239,8 +239,8 @@ module.exports = class Client {
   }
 
   /**
-   * Lookup a user by userId
-   * @param {string} accountId Id of the account to lookup
+   * Lookup a user by userIds
+   * @param {array} accountIds of accounts to look up
    * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
    */
   async lookupByUserIds(accountIds) {
