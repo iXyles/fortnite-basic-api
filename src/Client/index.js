@@ -239,6 +239,22 @@ module.exports = class Client {
   }
 
   /**
+   * Lookup a user by userId
+   * @param {string} accountId Id of the account to lookup
+   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
+   */
+  async lookupByUserIds(accountIds) {
+    const check = await this.checkToken();
+    if (!check.tokenValid) return check;
+
+    const accounts = await this.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${accountIds.join('&accountId=')}`, `bearer ${this.auths.accessToken}`);
+
+    if (accounts.error) return accounts;
+    if (accounts.length === 0) return { error: 'No usernames with the ids could be found.' };
+    return accounts;
+  }
+
+  /**
    * Get stats from Epics V1 stats API
    * @param {string|object} user JSON of an already lookedup account,
    * username of the account or the userId
