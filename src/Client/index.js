@@ -306,15 +306,13 @@ module.exports = class Client {
   }
 
   /**
+   * No auth required
    * Get the current store of BR
    * @param {string} language for result (fr, de, es, zh, it, ja, en)
    * default language is set to english
    * @returns {object} JSON Object of the result
    */
   async getBRNews(language = 'en') {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
     return this.requester.sendGet(`${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.auths.accessToken}`);
   }
 
