@@ -11,7 +11,7 @@ Which I previously used fortnite-api but have gotten issues with unhandledreject
 
 Example usage: 
 ```
-const { Client } = require('fortnite-basic-api');
+const { Client } = require('../index.js');
 
 // Creation of the Client
 const client = new Client({
@@ -23,8 +23,10 @@ const client = new Client({
 
 // Example of usage
 (async () => {
+  // Perform the login process of the "client"
   console.log(await client.login());
 
+  // Since everything is async based, we can query everything parallel how ever we want with await
   const parallel = await Promise.all([
     // Supports both name & id
     client.getV1Stats('iXyles'),
@@ -34,11 +36,21 @@ const client = new Client({
     client.getV2Stats('iXyles'),
     client.getV2Stats('96afefcb12e14e7fa1bcfab1189eae55'),
 
+    // Or maybe just lookup?
+    client.accountLookup('iXyles'),
+    client.accountLookup('96afefcb12e14e7fa1bcfab1189eae55'),
+
+    // or maybe a couple at a time?
+    client.accountLookup(['iXyles', '96afefcb12e14e7fa1bcfab1189eae55']),
+
     client.getServerStatus(),
-    client.getBRNews('en'), // insert a different language code if wanted
+    client.getBRNews('es'), // insert a different language code if wanted
     client.getBRStore(),
     client.getPVEInfo(),
     client.getBREventFlags(),
+
+    // or maybe the current logged in user accountId
+    client.auths.accountId,
   ]);
 
   (parallel).forEach((result) => {
