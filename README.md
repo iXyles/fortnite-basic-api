@@ -11,7 +11,7 @@ Which I previously used fortnite-api but have gotten issues with unhandledreject
 
 Example usage: 
 ```
-const { Client } = require('../index.js');
+const { Client } = require('fortnite-basic-api');
 
 // Creation of the Client
 const client = new Client({
