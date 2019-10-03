@@ -203,6 +203,7 @@ module.exports = class Client {
     if (account.error) return account;
     if (account.externalAuths) return account;
     if (Client.isDisplayName(account)) return this.lookupByUsername(account);
+    if (account instanceof Array) return this.lookupByUserIds(account);
     return this.lookupByUserId(account);
   }
 
@@ -247,7 +248,25 @@ module.exports = class Client {
     const check = await this.checkToken();
     if (!check.tokenValid) return check;
 
-    const accounts = await this.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${accountIds.join('&accountId=')}`, `bearer ${this.auths.accessToken}`);
+    const chunk = 100;
+    let i; let j; const requests = [];
+
+    for (let u = accountIds.length - 1; u >= 0; u -= 1) {
+      if (Client.isDisplayName(accountIds[u])) {
+        requests.push(this.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(accountIds[u])}`, `bearer ${this.auths.accessToken}`));
+        accountIds.splice(u, 1);
+      }
+    }
+
+    for (i = 0, j = accountIds.length; i < j; i += chunk) {
+      const temp = accountIds.slice(i, i + chunk);
+      requests.push(this.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${temp.join('&accountId=')}`, `bearer ${this.auths.accessToken}`));
+    }
+
+    const parallel = await Promise.all(requests);
+    let accounts = [];
+    Object.keys(parallel).forEach(result => accounts.push(parallel[result]));
+    accounts = accounts.flat(1);
 
     if (accounts.error) return accounts;
     if (accounts.length === 0) return { error: 'No usernames with the ids could be found.' };

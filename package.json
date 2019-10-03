@@ -1,6 +1,6 @@
 {
   "name": "fortnite-basic-api",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "basic fortnite api and other things, supporting both v1 and v2, using request-promises",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,12 @@
     "api",
     "fortnite",
     "promises",
-    "v1 & v2"
+    "v1 & v2",
+    "store",
+    "news",
+    "event flags",
+    "accounts",
+    "stw info"
   ],
   "homepage": "https://github.com/iXyles/fortnite-basic-api",
   "bugs": {
