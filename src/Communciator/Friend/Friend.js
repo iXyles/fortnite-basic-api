@@ -1,0 +1,76 @@
+const Status = require('./Status.js');
+const FriendStatus = require('./FriendStatus.js');
+const Utils = require('../../Utils.js');
+
+module.exports = class Friend {
+  constructor(communicator, data = {}) {
+    this.communicator = communicator;
+
+    this.accountId = data.accountId;
+    this.JID = Utils.makeJID(this.accountId);
+    this.friendStatus = data.friendStatus || Status.NONE;
+    this.status = data.status;
+    this.presence = data.presence;
+  }
+
+  /**
+   * Request and get the user presence and status
+   * @param {string} type - What data to return to the caller
+   */
+  async getStatus(type = 'status') {
+    await this.communicator.sendProbe(this.accountId);
+    try {
+      const result = await this.communicator.events.resolveEvent(`friend#${this.accountId}:presence`, 5000, s => s);
+
+      this.status = result.status;
+      this.presence = result.presence;
+
+      return type === 'status' ? this.status : this.presence;
+    } catch (err) {
+      return `Could not retrieve ${type}`;
+    }
+  }
+
+  /**
+   * Try to remove the friend
+   * @result {bool} if removal was success or failed
+   */
+  async remove() {
+    const result = await this.communicator.friendship.removeFriend(this.accountId);
+    this.friendStatus = result ? FriendStatus.REMOVED : this.friendStatus;
+    return this.friendStatus === FriendStatus.REMOVED;
+  }
+
+  /**
+   * Try to add as friend, if friendStatus is set to `INCOMING`
+   * @result {bool} if friend request was succesful
+   */
+  async accept() {
+    if (this.friendStatus === FriendStatus.INCOMING) {
+      const result = await this.communicator.friendship.addFriend(this.accountId);
+      this.friendStatus = result ? FriendStatus.ACCEPTED : this.friendStatus;
+    }
+    return this.friendStatus === FriendStatus.ACCEPTED;
+  }
+
+  async reject() {
+    if (this.friendStatus === FriendStatus.INCOMING) {
+      const result = await this.communicator.friendship.removeFriend(this.accountId);
+      this.friendStatus = result ? FriendStatus.REJECTED : this.status;
+    }
+    return this.friendStatus === FriendStatus.REJECTED;
+  }
+
+  /**
+   * Send a message to the friend
+   * @param {strirng} message that shall be sent
+   * @result {bool} if message was sent or not
+   */
+  async sendMessage(message) {
+    if (this.friendStatus === FriendStatus.ACCEPTED) {
+      this.communicator.friendship.sendMessage(this.accountId, message);
+    }
+
+    return this.friendStatus === FriendStatus.ACCEPTED;
+  }
+};

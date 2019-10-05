@@ -29,4 +29,8 @@ module.exports = Object.freeze({
   XMPP_SERVER: 'xmpp-service-prod.ol.epicgames.com',
   EPIC_PROD_ENV: 'prod.ol.epicgames.com',
 
+  // FRIENDS
+  FRIENDS: 'https://friends-public-service-prod06.ol.epicgames.com/friends/api/public/friends',
+  FRIENDS_BLOCKLIST: 'https://friends-public-service-prod06.ol.epicgames.com/friends/api/public/blocklist',
+
 });

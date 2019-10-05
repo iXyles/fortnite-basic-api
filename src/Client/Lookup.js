@@ -8,8 +8,9 @@ module.exports = class Lookup {
 
   /**
    * Retrieve account data information
-   * @param {string|object} user JSON of an already lookedup account,
+   * @param {string|object|array} user JSON of an already lookedup account,
    * username of the account or the userId
+   * array of usernames or ids
    * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
    */
   async accountLookup(account) {

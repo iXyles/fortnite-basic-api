@@ -21,10 +21,9 @@ module.exports = class Client {
     this.lookup = new Lookup(this);
     this.stats = new Stats(this);
 
-    // To keep backwards compability for old users
+    // To keep backwards compability for old version (to a certain degree)
     // Authentications
     this.login = async () => this.authenticator.login();
-    this.checkToken = () => this.authenticator.checkToken();
     this.auths = this.authenticator;
 
     // Stats
@@ -40,7 +39,7 @@ module.exports = class Client {
    * @returns {boolean} `true | false`
    */
   async getServerStatus() {
-    const check = await this.checkToken();
+    const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     const status = await this.requester.sendGet(Endpoints.SERVER_STATUS, `bearer ${this.auths.accessToken}`);
@@ -64,7 +63,7 @@ module.exports = class Client {
    * @returns {object} JSON Object of the result
    */
   async getBRStore() {
-    const check = await this.checkToken();
+    const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     return this.requester.sendGet(Endpoints.BR_STORE, `bearer ${this.auths.accessToken}`);
@@ -75,7 +74,7 @@ module.exports = class Client {
    * @returns {object} JSON Object of the result
    */
   async getPVEInfo() {
-    const check = await this.checkToken();
+    const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     return this.requester.sendGet(Endpoints.PVE_INFO, `bearer ${this.auths.accessToken}`);
@@ -86,7 +85,7 @@ module.exports = class Client {
    * @returns {object} JSON Object of the result
    */
   async getBREventFlags() {
-    const check = await this.checkToken();
+    const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     return this.requester.sendGet(Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
