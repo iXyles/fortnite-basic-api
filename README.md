@@ -34,17 +34,23 @@ const communicator = new Communicator(client);
   console.log(await client.login());
 
   // Setup communicator events
-  communicator.events.on('session:started', () => {
+  communicator.events.on('session:started', async () => {
     console.log('XMPP Client is fully connected');
-    communicator.friendship.addFriend('iXyles'); // example of how to add a friend
+    console.log('Add friend: ', await communicator.friendship.addFriend('iXyles')); // example of how to add a friend
   });
 
   communicator.events.on('friend:request', async (friendrequest) => {
-    if (FriendStatus.INCOMING) console.log(await friendrequest.accept());
+    if (friendrequest.friendStatus === FriendStatus.INCOMING) {
+      console.log(friendrequest, await friendrequest.accept());
+    }
   });
 
   communicator.events.on('friend:added', async (friend) => {
     console.log(`You're now friend with: ${friend.accountId}`);
+  });
+
+  communicator.events.on('friend:reject', async (friend) => {
+    console.log(`You got rejected the friend request by: ${friend.accountId}`);
   });
 
   communicator.events.on('friend:removed', async (friend) => {
@@ -61,7 +67,7 @@ const communicator = new Communicator(client);
 
   communicator.events.on('friend:message', async (friend) => {
     console.log(await friend.getStatus());
-    console.log(friend.sendMessage('Send something back'));
+    console.log('message', await friend.sendMessage('Send something back'));
   });
 
   // Then connect it
