@@ -25,4 +25,8 @@ module.exports = Object.freeze({
   // STW
   PVE_INFO: 'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/game/v2/world/info',
 
+  // COMMUNICATOR
+  XMPP_SERVER: 'xmpp-service-prod.ol.epicgames.com',
+  EPIC_PROD_ENV: 'prod.ol.epicgames.com',
+
 });
