@@ -201,10 +201,22 @@ module.exports = class CommunicatorEvents extends EventEmitter {
   onFriendRemoval(data) {
     const friend = new Friend(this.communicator, {
       accountId: data.to,
-      friendStatus: FriendStatus.REMOVED,
+      friendStatus: data.reason === 'ABORTED'
+        ? FriendStatus.ABORTED
+        : data.reason === 'REJECTED'
+          ? FriendStatus.REJECTED
+          : FriendStatus.REMOVED,
     });
 
-    this.emit(data.reason === 'ABORTED' ? 'friend:abort' : 'friend:removed', friend);
-    this.emit(data.reason === 'ABORTED' ? `friend#${friend.accountId}:abort` : `friend#${friend.accountId}:removed`, friend);
+    this.emit(friend.friendStatus === 'ABORTED'
+      ? 'friend:abort'
+      : friend.friendStatus === 'REJECTED'
+        ? 'friend:reject'
+        : 'friend:removed', friend);
+    this.emit(friend.friendStatus === 'ABORTED'
+      ? `friend#${friend.accountId}:abort`
+      : friend.friendStatus === 'REJECTED'
+        ? `friend#${friend.accountId}:reject`
+        : `friend#${friend.accountId}:removed`, friend);
   }
 };

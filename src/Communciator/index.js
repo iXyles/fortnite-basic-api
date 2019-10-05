@@ -7,12 +7,13 @@ const Utils = require('../Utils.js');
 
 module.exports = class Communicator {
   constructor(client, args = {}) {
+    this.client = client;
+
     this.events = new CommunicatorEvents(this);
     this.friendship = new Friendship(this);
 
     this.connected = false;
     this.uuid = Utils.generateUUID();
-    this.client = client;
     this.resource = `V2:Fortnite:WIN::${this.uuid}`;
 
     // settings

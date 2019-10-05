@@ -1,6 +1,8 @@
 const Endpoints = require('../../../resources/Endpoints');
 const Utils = require('../../Utils.js');
 
+const Friend = require('./Friend');
+
 module.exports = class Friendship {
   constructor(communicator) {
     this.communicator = communicator;
@@ -9,28 +11,34 @@ module.exports = class Friendship {
 
   /**
    * Accept or add a user with ID
-   * @param {string} id - GUID of the user to add
+   * @param {string} id - User ID or name to add
    */
-  async addFriend(id) {
+  async addFriend(user) {
+    const { id } = await this.client.lookup.accountLookup(user);
+    if (!id) return false;
+
     const result = await this.client.requester.sendPost(
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
       `bearer ${this.client.authenticator.accessToken}`,
     );
 
-    return result === 'undefined' || (result && result.error === 'undefined');
+    return result === undefined;
   }
 
   /**
    * Remove a friend with ID
-   * @param {string} id - GUID of the user to remove
+   * @param {string} id - User ID or name to add
    */
-  async removeFriend(id) {
+  async removeFriend(user) {
+    const { id } = await this.client.lookup.accountLookup(user);
+    if (!id) return false;
+
     const result = await this.client.requester.sendDelete(
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
       `bearer ${this.client.authenticator.accessToken}`,
     );
 
-    return result === 'undefined' || (result && result.error === 'undefined');
+    return result === undefined;
   }
 
   /**
@@ -38,12 +46,15 @@ module.exports = class Friendship {
    * @param {JID|string} to - Who to send the chat message towards
    * @param {string} message - The message to send the user
    */
-  sendMessage(to, message) {
-    const user = typeof to === 'string' ? Utils.makeJID(to) : to;
+  async sendMessage(to, message) {
+    const id = typeof to === 'string' ? (await this.client.lookup.accountLookup(to)).id : to;
+    if (!id) return false;
+    const user = typeof to === 'string' ? Utils.makeJID(id) : id;
     this.communicator.stream.sendMessage({
       to: user,
       type: 'chat',
       body: message,
     });
+    return true;
   }
 };

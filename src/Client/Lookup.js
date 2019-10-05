@@ -27,7 +27,7 @@ module.exports = class Lookup {
    * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
    */
   async lookupByUsername(username) {
-    const check = await this.client.checkToken();
+    const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     const account = await this.client.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(username)}`, `bearer ${this.client.authenticator.accessToken}`);
@@ -43,7 +43,7 @@ module.exports = class Lookup {
    * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
    */
   async lookupByUserId(accountId) {
-    const check = await this.client.checkToken();
+    const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     const account = await this.client.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${accountId}`, `bearer ${this.client.authenticator.accessToken}`);
@@ -59,7 +59,7 @@ module.exports = class Lookup {
    * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
    */
   async lookupByUserIds(accountIds) {
-    const check = await this.client.checkToken();
+    const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
     const chunk = 100;

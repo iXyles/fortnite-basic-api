@@ -7,5 +7,6 @@ module.exports = Object.freeze({
   BLOCKED: 'BLOCKED',
   REMOVED: 'REMOVED',
   REJECTED: 'REJECTED',
+  ABORTED: 'ABORTED',
 
 });

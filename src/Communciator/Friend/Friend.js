@@ -14,6 +14,27 @@ module.exports = class Friend {
   }
 
   /**
+   * Fetch data about user and update Friend
+   */
+  async fetch() {
+    const data = await this.communicator.client.lookup.accountLookup(this.accountId);
+    if (data) this.update(data);
+  }
+
+  /**
+   * Update the friend user data
+   * @param {object) data of the user to update
+   */
+  update(data) {
+    if (!data.displayName) {
+      Object.keys(data.externalAuths).forEach((key) => {
+        this.displayName = `[${key}]${data.externalAuths[key].externalDisplayName}`;
+      });
+    } else this.displayName = data.displayName || 'UNKNOWN';
+    this.externalAuths = data.externalAuths;
+  }
+
+  /**
    * Request and get the user presence and status
    * @param {string} type - What data to return to the caller
    */

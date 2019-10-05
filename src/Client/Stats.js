@@ -13,10 +13,10 @@ module.exports = class Stats {
    * @returns {object} JSON Object of the result (parsed and converted)
    */
   async getV1Stats(user) {
-    const check = await this.client.checkToken();
+    const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const account = await this.client.accountLookup(user);
+    const account = await this.client.lookup.accountLookup(user);
     if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
 
     // Request all the stats
@@ -40,10 +40,10 @@ module.exports = class Stats {
    * @returns {object} JSON Object of the result (parsed and converted)
    */
   async getV2Stats(user) {
-    const check = await this.client.checkToken();
+    const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const account = await this.client.accountLookup(user);
+    const account = await this.client.lookup.accountLookup(user);
     if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
 
     // Request all the stats
