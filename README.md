@@ -9,7 +9,7 @@ Inspired by other repos about Fortnite API's as:
 
 Which I previously used fortnite-api but have gotten issues with unhandledrejections which causing issues in other projects. Therefore I rebuilt with focus on Async/await to resolve the issues and adding support for V2 API endpoint.
 
-# fortnite-basic-api
+# BREAKING CHANGE
 V1.3.0 Changed location of where you find "lookup, stats, authenticator" data, check index.js in Client to see more regarding it.
 
 Example usage: 
