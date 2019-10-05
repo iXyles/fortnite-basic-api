@@ -1,13 +1,12 @@
-const exitHook = require('async-exit-hook');
-const readline = require('readline');
-
 const Endpoints = require('../../resources/Endpoints');
-const Requester = require('../Requester.js');
 
-const Converter = require('../Converter');
+const Requester = require('../Requester.js');
+const Authenticator = require('./Authenticator.js');
+const Lookup = require('./Lookup.js');
+const Stats = require('./Stats.js');
 
 module.exports = class Client {
-  constructor(args) {
+  constructor(args = {}) {
     this.email = args.email || undefined;
     this.password = args.password || undefined;
     this.launcherToken = args.launcherToken || undefined;
@@ -17,314 +16,23 @@ module.exports = class Client {
       throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
     }
 
-    this.auths = {};
     this.requester = new Requester(this);
-    this.killHook = false;
-  }
+    this.authenticator = new Authenticator(this);
+    this.lookup = new Lookup(this);
+    this.stats = new Stats(this);
 
-  /**
-   * Perform the login process of the `Client`
-   * @return {object} JSON Object of login result
-   */
-  async login() {
-    const token = await this.getOAuthToken();
-    if (token.error) return token;
+    // To keep backwards compability for old users
+    // Authentications
+    this.login = async () => this.authenticator.login();
+    this.checkToken = () => this.authenticator.checkToken();
+    this.auths = this.authenticator;
 
-    const exchange = await this.getOauthExchangeToken(token.access_token);
-    if (exchange.error) return exchange;
+    // Stats
+    this.getV1Stats = async user => this.stats.getV1Stats(user);
+    this.getV2Stats = async user => this.stats.getV2Stats(user);
 
-    const fnToken = await this.getFortniteOAuthToken(exchange);
-    if (fnToken.error) return fnToken;
-
-    // Setup tokens from fnToken
-    this.setAuthData(fnToken);
-
-    // Setup kill hook for the session token - to prevent login issues on restarts
-    if (!this.killHook) {
-      exitHook(async (callback) => {
-        // eslint-disable-next-line no-console
-        await console.info(await this.killCurrentSession());
-        callback();
-      });
-      this.killHook = true;
-    }
-
-    return { success: true }; // successful login
-  }
-
-  /**
-   * Set auth data from login() or refreshToken() input
-   */
-  setAuthData(data) {
-    this.auths.expiresAt = data.expires_at;
-    this.auths.accessToken = data.access_token;
-    this.auths.refreshToken = data.refresh_token;
-    this.auths.accountId = data.account_id;
-  }
-
-  /**
-   * Perform login and get the OAuth token for the launcher
-   * @returns {object} JSON Object of result
-   */
-  async getOAuthToken(twoStep = false, method) {
-    await this.requester.sendGet(Endpoints.CSRF_TOKEN, undefined, undefined, undefined, false);
-    this.xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
-
-    if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
-
-    const headers = {
-      'x-xsrf-token': this.xsrf.value,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    };
-
-    const code = twoStep ? await Client.consolePrompt('Two factor detected, write the 6 number code from 2FA: ') : '';
-
-    const dataAuth = twoStep
-      ? {
-        code,
-        method,
-        rememberDevice: false,
-      }
-      : {
-        email: this.email,
-        password: this.password,
-        rememberMe: true,
-      };
-
-    const login = await this.requester.sendPost(Endpoints.API_LOGIN + (twoStep ? '/mfa' : ''),
-      undefined, dataAuth, headers, true);
-
-    if (login && login.error && login.error.metadata && login.error.metadata.twoFactorMethod) {
-      return this.getOAuthToken(true, login.error.metadata.twoFactorMethod);
-    }
-
-    if (login && login.error) return login;
-
-    const exchange = await this.requester.sendGet(Endpoints.API_EXCHANGE_CODE,
-      undefined, undefined, { 'x-xsrf-token': this.xsrf.value }, false);
-
-    const exchangeData = {
-      grant_type: 'exchange_code',
-      exchange_code: exchange.code,
-      includePerms: true,
-      token_type: 'eg1',
-    };
-
-    const res = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.launcherToken}`, exchangeData, headers, true);
-
-    if (res.error || res.access_token) return res;
-    return { error: `[getOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
-  }
-
-  /**
-   * Perform OAuth Exchange Token request
-   * @param {string} token access_token from login data
-   * @returns {object} JSON Object of result
-   */
-  async getOauthExchangeToken(token) {
-    const res = await this.requester.sendGet(Endpoints.OAUTH_EXCHANGE, `bearer ${token}`);
-
-    if (res.error || res.code) return res;
-    return { error: `[getOauthExchangeToken] Unknown response from gateway ${Endpoints.OAUTH_EXCHANGE}` };
-  }
-
-  /**
-   * Get OAuth Token for Fortnite Game access
-   * @param {string} exchange Token from getOauthExchangeToken()
-   * @returns {object} JSON Object of result
-   */
-  async getFortniteOAuthToken(exchange) {
-    const dataAuth = {
-      grant_type: 'exchange_code',
-      exchange_code: exchange.code,
-      includePerms: true,
-      token_type: 'eg1',
-    };
-
-    const res = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.fortniteToken}`, dataAuth, undefined, true);
-
-    if (res.error || res.access_token) return res;
-    return { error: `[getFortniteOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
-  }
-
-  /**
-   * Check if the current token has expired or not
-   * If it has expired it will force a `refreshToken()`
-   * @returns {object} JSON Object of result `tokenValid, error(optional)`
-   */
-  async checkToken() {
-    if (!this.auths.accessToken) return { tokenValid: false, error: 'No accessToken set' };
-
-    const actualDate = new Date(); // Now
-    const expireDate = new Date(new Date(this.auths.expiresAt).getTime() - 15 * 60000);
-
-    if (this.auths.accessToken && this.auths.expiresAt && expireDate < actualDate) {
-      const refresh = await this.refreshToken();
-      if (refresh.error) return { tokenValid: false, error: 'Failed refreshing token on checkToken()' };
-    }
-
-    return { tokenValid: true }; // Token valid
-  }
-
-  /**
-   * Refresh the accessToken of the `Client`
-   * @returns {object} JSON Object of result
-   */
-  async refreshToken() {
-    if (!this.auths.refreshToken) return { error: 'Cannot refresh the token due to no refreshToken set.' };
-
-    // remove it so the "checkToken()" can validated
-    // if it was successful or not if several requests are made.
-    this.auths.accessToken = undefined;
-
-    const data = {
-      grant_type: 'refresh_token',
-      refresh_token: this.auths.refreshToken,
-      includePerms: true,
-    };
-
-    const refresh = await this.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.fortniteToken}`, data, undefined, true);
-
-    if (refresh.error) return { success: false, error: refresh.error };
-    if (refresh.access_token) {
-      this.setAuthData(refresh); // Setup tokens from refresh
-      return { success: true };
-    }
-    return { error: `[refreshToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
-  }
-
-  /**
-   * Retrieve account data information
-   * @param {string|object} user JSON of an already lookedup account,
-   * username of the account or the userId
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
-   */
-  async accountLookup(account) {
-    if (account.error) return account;
-    if (account.externalAuths) return account;
-    if (Client.isDisplayName(account)) return this.lookupByUsername(account);
-    if (account instanceof Array) return this.lookupByUserIds(account);
-    return this.lookupByUserId(account);
-  }
-
-  /**
-   * Gets a users userId and performs "lookupByUserId()"
-   * @param {string} username Name of the user to lookup
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
-   */
-  async lookupByUsername(username) {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
-    const account = await this.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(username)}`, `bearer ${this.auths.accessToken}`);
-
-    if (account.error) return account;
-    if (!account.id) return { error: 'No username with the name could be found.' };
-    return this.lookupByUserId(account.id);
-  }
-
-  /**
-   * Lookup a user by userId
-   * @param {string} accountId Id of the account to lookup
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
-   */
-  async lookupByUserId(accountId) {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
-    const account = await this.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${accountId}`, `bearer ${this.auths.accessToken}`);
-
-    if (account.error) return account;
-    if (account.length === 0) return { error: 'No username with the name could be found.' };
-    return account[0];
-  }
-
-  /**
-   * Lookup a user by userIds
-   * @param {array} accountIds of accounts to look up
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
-   */
-  async lookupByUserIds(accountIds) {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
-    const chunk = 100;
-    let i; let j; const requests = [];
-
-    for (let u = accountIds.length - 1; u >= 0; u -= 1) {
-      if (Client.isDisplayName(accountIds[u])) {
-        requests.push(this.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(accountIds[u])}`, `bearer ${this.auths.accessToken}`));
-        accountIds.splice(u, 1);
-      }
-    }
-
-    for (i = 0, j = accountIds.length; i < j; i += chunk) {
-      const temp = accountIds.slice(i, i + chunk);
-      requests.push(this.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${temp.join('&accountId=')}`, `bearer ${this.auths.accessToken}`));
-    }
-
-    const parallel = await Promise.all(requests);
-    let accounts = [];
-    Object.keys(parallel).forEach(result => accounts.push(parallel[result]));
-    accounts = accounts.flat(1);
-
-    if (accounts.error) return accounts;
-    if (accounts.length === 0) return { error: 'No usernames with the ids could be found.' };
-    return accounts;
-  }
-
-  /**
-   * Get stats from Epics V1 stats API
-   * @param {string|object} user JSON of an already lookedup account,
-   * username of the account or the userId
-   * @returns {object} JSON Object of the result (parsed and converted)
-   */
-  async getV1Stats(user) {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
-    const account = await this.accountLookup(user);
-    if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
-
-    // Request all the stats
-    const promises = [];
-    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/alltime`, `bearer ${this.auths.accessToken}`));
-    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/weekly`, `bearer ${this.auths.accessToken}`));
-    const result = await Promise.all(promises);
-
-    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };
-
-    const lifetime = Converter.convertV1(result[0]);
-    const season = Converter.convertV1(result[1]);
-
-    return { lifetime, season, user: account };
-  }
-
-  /**
-   * Get stats from Epics V2 stats API
-   * @param {string|object} user JSON of an already lookedup account,
-   * username of the account or the userId
-   * @returns {object} JSON Object of the result (parsed and converted)
-   */
-  async getV2Stats(user) {
-    const check = await this.checkToken();
-    if (!check.tokenValid) return check;
-
-    const account = await this.accountLookup(user);
-    if (account.error || !account.id) return { error: account.error || 'Cannot retrieve stats since the input account does not exist' };
-
-    // Request all the stats
-    const promises = [];
-    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.auths.accessToken}`));
-    promises.push(this.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.seasonStartTime}`, `bearer ${this.auths.accessToken}`));
-    const result = await Promise.all(promises);
-
-    if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };
-
-    const lifetime = Converter.convertV2(result[0]);
-    const season = Converter.convertV2(result[1]);
-
-    return { lifetime, season, user: account };
+    // Lookups
+    this.accountLookup = async account => this.lookup.accountLookup(account);
   }
 
   /**
@@ -382,39 +90,5 @@ module.exports = class Client {
     if (!check.tokenValid) return check;
 
     return this.requester.sendGet(Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
-  }
-
-  /**
-   * Kill the current running session of the `Client`
-   * @returns {object} Object of result
-   */
-  async killCurrentSession() {
-    if (!this.auths.accessToken) return { error: 'Cannot kill the session due to no accessToken set.' };
-
-    const res = await this.requester.sendDelete(`${Endpoints.OAUTH_KILL_SESSION}/${this.auths.accessToken}`, `bearer ${this.auths.accessToken}`, {}, undefined, true);
-    if (!res) return { success: '[fortnite-basic-api] Client session has been killed.' };
-    if (res.error) return res;
-    return { error: `[killCurrentSession] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
-  }
-
-  /**
-   * Checks if `value` is a valid username.
-   * @param {string} value The parameter to validate
-   * @returns {boolean} `true | false`
-   */
-  static isDisplayName(value) {
-    return value && typeof value === 'string' && value.length >= 3 && value.length <= 16;
-  }
-
-  static consolePrompt(query) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    return new Promise(resolve => rl.question(query, (ans) => {
-      rl.close();
-      resolve(ans);
-    }));
   }
 };

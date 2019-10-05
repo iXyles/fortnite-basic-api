@@ -9,6 +9,9 @@ module.exports = class CommunicatorEvents extends EventEmitter {
     this.eventsRegistered = false;
   }
 
+  /**
+   * Setup listeners for events coming from the XMPP client
+   */
   setupEvents() {
     if (this.eventsRegistered) return; // We already added them to this instance
 

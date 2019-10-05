@@ -28,10 +28,10 @@ module.exports = class Communicator {
       },
 
       credentials: {
-        jid: `${this.client.auths.accountId}@${Endpoints.EPIC_PROD_ENV}`,
+        jid: `${this.client.authenticator.accountId}@${Endpoints.EPIC_PROD_ENV}`,
         host: Endpoints.EPIC_PROD_ENV,
-        username: this.client.auths.accountId,
-        password: this.client.auths.accessToken,
+        username: this.client.authenticator.accountId,
+        password: this.client.authenticator.accessToken,
       },
     });
 
@@ -56,7 +56,7 @@ module.exports = class Communicator {
    * Perform the connect towards XMPP Server
    */
   async connect() {
-    if (!this.client.auths.accessToken) return { error: 'Cannot connect before LOGIN has been performed.' };
+    if (!this.client.authenticator.accessToken) return { error: 'Cannot connect before LOGIN has been performed.' };
     if (!this.stream) this.setup();
     this.events.setupEvents();
     this.stream.connect();
