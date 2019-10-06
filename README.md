@@ -1,6 +1,6 @@
 # fortnite-basic-api
-[![npm version](https://img.shields.io/npm/v/epicgames-client.svg)](https://npmjs.com/package/fortnite-basic-api)
-[![npm downloads](https://img.shields.io/npm/dm/epicgames-client.svg)](https://npmjs.com/package/fortnite-basic-api)
+[![npm version](https://img.shields.io/npm/v/fortnite-basic-api.svg)](https://npmjs.com/package/fortnite-basic-api)
+[![npm downloads](https://img.shields.io/npm/dm/fortnite-basic-api.svg)](https://npmjs.com/package/fortnite-basic-api)
 [![license](https://img.shields.io/npm/l/epicgames-client.svg)](https://github.com/iXyles/fortnite-basic-api/blob/master/LICENSE)
 
 __Basic Fortnite API for stats and server status built with async/await__
