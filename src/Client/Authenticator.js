@@ -10,6 +10,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     this.client = client;
     this.killHook = false;
+    this.refreshing = false;
   }
 
   /**
@@ -19,6 +20,19 @@ module.exports = class Authenticator extends EventEmitter {
   async login() {
     const token = await this.getOAuthToken();
     if (token.error) return token;
+
+    // Use the redirect to set the bearer token for launcher requests
+    this.client.requester.sendGet('https://www.epicgames.com/id/api/redirect',
+      null,
+      null,
+      { Referer: 'https://www.epicgames.com/id/login' });
+
+    const eula = await this.checkEULA(token);
+    if (eula.error) return eula;
+    if (!eula.accepted) {
+      const eulaAccept = await this.acceptEULA(token, eula);
+      if (!eulaAccept.accepted) return eulaAccept;
+    }
 
     const exchange = await this.getOauthExchangeToken(token.access_token);
     if (exchange.error) return exchange;
@@ -78,7 +92,8 @@ module.exports = class Authenticator extends EventEmitter {
    * @returns {object} JSON Object of result
    */
   async getOAuthToken(twoStep = false, method) {
-    await this.client.requester.sendGet(Endpoints.CSRF_TOKEN, undefined, undefined, undefined, false);
+    await this.client.requester.sendGet(Endpoints.CSRF_TOKEN,
+      undefined, undefined, undefined, false);
     this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
 
     if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
@@ -163,7 +178,21 @@ module.exports = class Authenticator extends EventEmitter {
       includePerms: true,
     };
 
-    const refresh = await this.client.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.client.fortniteToken}`, data, undefined, true);
+    let refresh;
+
+    if (!this.refreshing) {
+      this.refreshing = true;
+      refresh = await this.client.requester.sendPost(Endpoints.OAUTH_TOKEN,
+        `basic ${this.client.fortniteToken}`, data, undefined, true);
+      this.emit('token_refresh', refresh);
+    } else {
+      try {
+        refresh = await Utils.resolveEvent(this, 'token_refresh', 5000, s => s);
+      } catch (err) { // should only happen in race condition
+        if (this.accessToken) refresh = await this.checkToken();
+        else refresh = { error: 'Token refresh failed, error unknown because of missed event fire' };
+      }
+    }
 
     if (refresh.error) return { success: false, error: refresh.error };
     if (refresh.access_token) {
@@ -194,7 +223,83 @@ module.exports = class Authenticator extends EventEmitter {
     this.accessToken = data.access_token;
     this.refreshToken = data.refresh_token;
     this.accountId = data.account_id;
+    this.perms = data.perms;
 
     this.emit('auths_updated');
+  }
+
+  /**
+   * Check EULA for Fortnite
+   * @return {object} object with `accepted` of agreed or not
+   * along result data if new agreement found and `accepted` is false
+   */
+  async checkEULA(login) {
+    this.entitlements = await this.client.requester.sendGet(
+      `${Endpoints.ENTITLEMENTS}/${login.account_id}/entitlements?start=0&count=5000`,
+      `bearer ${login.access_token}`,
+    );
+
+    const owngame = this.entitlements.find(s => s.entitlementName === 'Fortnite_Free');
+    if (!owngame) {
+      const success = await this.purchaseFortnite(login);
+      return success ? this.checkEULA(login) : { accepted: false, error: 'Purchase failed.' };
+    }
+
+    const result = await this.client.requester.sendGet(
+      `${Endpoints.EULA}/fn/account/${login.account_id}?locale=en`,
+      `bearer ${login.access_token}`,
+    );
+    if (result && result.error) {
+      return result.error.errorCode === 'errors.com.epicgames.eulatracking.agreement_not_found'
+        ? { accepted: true }
+        : { accepted: false };
+    }
+    return !result ? { accepted: true } : { accepted: false, ...result };
+  }
+
+  /**
+   * Accept a new EULA agreement
+   * @param {object} eula of new agreement that needs to be accepted
+   * @param {boolean} if agreement was sucessfully accepted or not
+   */
+  async acceptEULA(login, eula) {
+    const result = await this.client.requester.sendPost(
+      `${Endpoints.EULA}/${eula.key}/version/${eula.version}/account/${login.account_id}/accept?locale=en`,
+      `bearer ${login.access_token}`,
+    );
+    return result === undefined ? { accepted: true } : { accepted: false, ...result };
+  }
+
+  /**
+   * Purchase fortnite game for free
+   * @return {boolean} if purchase was successful or not
+   */
+  async purchaseFortnite(login) {
+    const offer = {
+      salesChannel: 'Launcher-purchase-client',
+      entitlementSource: 'Launcher-purchase-client',
+      returnSplitPaymentItems: false,
+      lineOffers: [{
+        offerId: '09176f4ff7564bbbb499bbe20bd6348f', // id of Fortnite in store
+        quantity: 1,
+        namespace: 'fn', // the namespace for purchasing fortnite
+      }],
+    };
+
+    const prepare = await this.client.requester.sendPost(
+      `${Endpoints.ORDER_PURCHASE}/${login.account_id}/orders/quickPurchase`,
+      `bearer ${login.access_token}`,
+      offer,
+    );
+
+    if (prepare.quickPurchaseStatus !== 'CHECKOUT') return false; // something went wrong.
+
+    const purchase = await this.client.requester.sendGet(
+      `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}`,
+    );
+
+    const token = purchase.match(/<input(?:.*?)id=\"purchaseToken\"(?:.*)value=\"([^"]+).*>/)[1];
+
+    return token && prepare.quickPurchaseStatus ? prepare.quickPurchaseStatus === 'CHECKOUT' : false;
   }
 };

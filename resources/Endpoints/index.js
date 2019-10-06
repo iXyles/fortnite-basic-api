@@ -1,6 +1,6 @@
 module.exports = Object.freeze({
 
-  // NEW ENDPOINTS
+  // NEW LOGINS
   CSRF_TOKEN: 'https://www.epicgames.com/id/api/csrf',
   API_LOGIN: 'https://www.epicgames.com/id/api/login',
   API_EXCHANGE_CODE: 'https://www.epicgames.com/id/api/exchange',
@@ -9,6 +9,10 @@ module.exports = Object.freeze({
   OAUTH_TOKEN: 'https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token',
   OAUTH_EXCHANGE: 'https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/exchange',
   OAUTH_KILL_SESSION: 'https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/sessions/kill',
+  EULA: 'https://eulatracking-public-service-prod06.ol.epicgames.com/eulatracking/api/public/agreements',
+  ENTITLEMENTS: 'https://entitlement-public-service-prod08.ol.epicgames.com/entitlement/api/account',
+  ORDER_PURCHASE: 'https://orderprocessor-public-service-ecomprod01.ol.epicgames.com/orderprocessor/api/shared/accounts',
+  CAPTCHA_PURCHASE: 'https://launcher-website-prod07.ol.epicgames.com/purchase',
 
   // ACCOUNT
   ACCOUNT: 'https://account-public-service-prod03.ol.epicgames.com/account/api/public/account',

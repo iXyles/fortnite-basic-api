@@ -5,12 +5,13 @@ const Utils = require('../../Utils.js');
 module.exports = class Friend {
   constructor(communicator, data = {}) {
     this.communicator = communicator;
-
     this.accountId = data.accountId;
     this.JID = Utils.makeJID(this.accountId);
     this.friendStatus = data.friendStatus || Status.NONE;
     this.status = data.status;
     this.presence = data.presence;
+    this.created = data.created || undefined; // Unknown, unless query via friendship
+    this.favorite = typeof data.favorite === 'boolean' ? data.favorite : undefined; // Unknown, unless query via friendship
   }
 
   /**
@@ -41,7 +42,8 @@ module.exports = class Friend {
   async getStatus(type = 'status') {
     await this.communicator.sendProbe(this.accountId);
     try {
-      const result = await this.communicator.events.resolveEvent(`friend#${this.accountId}:presence`, 5000, s => s);
+      const result = await Utils.resolveEvent(this.communicator.events,
+        `friend#${this.accountId}:presence`, 5000, s => s);
 
       this.status = result.status;
       this.presence = result.presence;
@@ -54,7 +56,7 @@ module.exports = class Friend {
 
   /**
    * Try to remove the friend
-   * @result {bool} if removal was success or failed
+   * @result {bool} if friend was success removed or not
    */
   async remove() {
     const result = await this.communicator.friendship.removeFriend(this.accountId);
@@ -64,7 +66,7 @@ module.exports = class Friend {
 
   /**
    * Try to add as friend, if friendStatus is set to `INCOMING`
-   * @result {bool} if friend request was succesful
+   * @result {bool} if friend request was succesful accepted
    */
   async accept() {
     if (this.friendStatus === FriendStatus.INCOMING) {
@@ -74,6 +76,10 @@ module.exports = class Friend {
     return this.friendStatus === FriendStatus.ACCEPTED;
   }
 
+  /**
+   * Try to reject an incoming friend request, if friendStatus is set to `INCOMING`
+   * @result {bool} if friend request was succesful rejected
+   */
   async reject() {
     if (this.friendStatus === FriendStatus.INCOMING) {
       const result = await this.communicator.friendship.removeFriend(this.accountId);

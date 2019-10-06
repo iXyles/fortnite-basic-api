@@ -15,23 +15,6 @@ module.exports = class CommunicatorEvents extends EventEmitter {
   }
 
   /**
-   * Wait and resolve for a specific event
-   * @param {string} event - Which event to wait for
-   * @param {number} time - Maximum waiting time
-   * @param {expression} filter - Expression to filter incoming events on
-   */
-  resolveEvent(event, time, filter) {
-    const timeout = typeof time === 'number' ? time : 5000;
-    return new Promise((resolve, reject) => {
-      this.on(event, (...args) => {
-        if (filter && !filter(...args)) return;
-        resolve(...args);
-      });
-      setTimeout(() => reject(new Error(`Waiting for communicator event timeout exceeded: ${timeout} ms`)), timeout);
-    });
-  }
-
-  /**
    * Setup listeners for events coming from the XMPP client
    */
   setupEvents() {
@@ -62,10 +45,14 @@ module.exports = class CommunicatorEvents extends EventEmitter {
    * Fire that the client disconnceted
    * if `reconnect` true, it will try to reconnect.
    */
-  onDisconnect() {
+  async onDisconnect() {
     this.communicator.connected = false;
     this.emit('disconnected');
-    if (this.reconnect) this.stream.connect();
+
+    if (!this.reconnect) return;
+    const check = await this.communicator.client.authenticator.checkToken();
+    if (check.tokenValid) this.stream.connect();
+    else if (!check.tokenValid) this.emit('reconnect', check);
   }
 
   /**
@@ -91,7 +78,7 @@ module.exports = class CommunicatorEvents extends EventEmitter {
   onPresenceUpdate(data) {
     try {
       if (data.from.startsWith(this.communicator.client.authenticator.accountId)) return;
-      if (data.type === 'unavailable' && !data.delay) return;
+      if (data.type === 'unavailable' && !data.delay) return; // should mean it was a failed presence (removed friend)
 
       const friend = new Friend(this.communicator, {
         accountId: data.from.split('@')[0],
@@ -109,7 +96,7 @@ module.exports = class CommunicatorEvents extends EventEmitter {
       this.emit('friend:presence', friend);
       this.emit(`friend#${friend.accountId}:presence`, friend);
     } catch (ex) {
-      console.error(ex);
+      console.error('[REPORT PLEASE] [fortnite-basic-api] [Communicator]', ex);
     }
   }
 
@@ -134,7 +121,7 @@ module.exports = class CommunicatorEvents extends EventEmitter {
         default: this.emit('unknowndatamessage', `None implemented data stream of type: ${body.type}`, body);
       }
     } catch (ex) {
-      console.error(ex);
+      console.error('[REPORT PLEASE] [fortnite-basic-api] [Communicator]', ex);
     }
   }
 

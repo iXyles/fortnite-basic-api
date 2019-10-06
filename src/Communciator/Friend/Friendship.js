@@ -1,7 +1,9 @@
+/* eslint-disable no-nested-ternary */
 const Endpoints = require('../../../resources/Endpoints');
 const Utils = require('../../Utils.js');
 
-const Friend = require('./Friend');
+const Friend = require('./Friend.js');
+const FriendStatus = require('./FriendStatus.js');
 
 module.exports = class Friendship {
   constructor(communicator) {
@@ -56,5 +58,84 @@ module.exports = class Friendship {
       body: message,
     });
     return true;
+  }
+
+  /**
+   * Returns raw data list of friends
+   * @param {boolean} includePending true if you want get pending friends.
+   */
+  async getRawFriends(includePending) {
+    try {
+      const result = await this.client.requester.sendGet(
+        `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}?includePending=${!!includePending}`,
+        `bearer ${this.client.authenticator.accessToken}`,
+      );
+
+      if (result.error) return [];
+
+      let friends = (Array.isArray(result) ? result : []).map(account => ({
+        accountId: account.accountId,
+        friendStatus: account.status === FriendStatus.ACCEPTED
+          ? FriendStatus.ACCEPTED
+          : account.direction === 'INBOUND'
+            ? FriendStatus.INCOMING
+            : FriendStatus.OUTGOING,
+        created: new Date(account.created),
+        favorite: account.favorite,
+      }));
+      const ids = friends.map(friend => friend.accountId);
+      if (ids.length === 0) return [];
+      const profiles = {};
+      (await this.client.lookup.accountLookup(ids)).forEach((profile) => {
+        profiles[profile.id] = {
+          displayName: profile.displayName,
+          externalAuths: profile.externalAuths,
+        };
+      });
+
+      friends = friends.map((friend) => {
+        if (profiles[friend.accountId]) return Object.assign(friend, profiles[friend.accountId]);
+        return null;
+      }).filter(friend => friend); // filter removes null values from array of friends.
+
+      return friends;
+    } catch (err) {
+      console.error('[REPORT PLEASE] [fortnite-basic-api] [Friendship]', err);
+    }
+
+    return [];
+  }
+
+  /**
+   * Get all incoming friend requests
+   * @return {array} array of incoming all friend requests (FriendStatus.INCOMING)
+   */
+  async getIncomingFriendRequests() {
+    const raw = await this.getRawFriends(true);
+    const friends = raw.map(friend => new Friend(this.communicator, friend));
+
+    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.INCOMING) : [];
+  }
+
+  /**
+   * Get all outgoing friend requests
+   * @return {array} array of all outgoing friend requests (FriendStatus.OUTGOING)
+   */
+  async getOutgoingFriendRequests() {
+    const raw = await this.getRawFriends(true);
+    const friends = raw.map(friend => new Friend(this.communicator, friend));
+
+    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.OUTGOING) : [];
+  }
+
+  /**
+   * Get all friends
+   * @return {array} array of all friends (FriendStatus.ACCEPTED)
+   */
+  async getFriends() {
+    const raw = await this.getRawFriends(false);
+    const friends = raw.map(friend => new Friend(this.communicator, friend));
+
+    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.ACCEPTED) : [];
   }
 };

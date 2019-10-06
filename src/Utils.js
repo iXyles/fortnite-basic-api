@@ -36,3 +36,21 @@ module.exports.makeJID = accountId => new JID(`${accountId}@${Endpoints.EPIC_PRO
  * @return {string} String uppercase GUID without "-" inside of it.
  */
 module.exports.generateUUID = () => UUID().replace(/-/g, '').toUpperCase();
+
+/**
+ * Wait and resolve for a specific event
+ * @param {instance} instance - Which instance to listen for events on
+ * @param {string} event - Which event to wait for
+ * @param {number} time - Maximum waiting time
+ * @param {expression} filter - Expression to filter incoming events on
+ */
+module.exports.resolveEvent = (instance, event, time, filter) => {
+  const timeout = typeof time === 'number' ? time : 5000;
+  return new Promise((resolve, reject) => {
+    instance.on(event, (...args) => {
+      if (filter && !filter(...args)) return;
+      resolve(...args);
+    });
+    setTimeout(() => reject(new Error(`Waiting for event timeout exceeded: ${timeout} ms`)), timeout);
+  });
+};

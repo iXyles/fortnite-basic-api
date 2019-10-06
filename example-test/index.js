@@ -5,7 +5,7 @@ const { Client, Communicator, FriendStatus } = require('../index.js');
 const client = new Client({
   email: '',
   password: '',
-  launcherToken: 'MzQ0NmNkNzI2OTRjNGE0NDg1ZDgxYjc3YWRiYjIxNDE6OTIwOWQ0YTVlMjVhNDU3ZmI5YjA3NDg5ZDMxM2I0MWE=',
+  launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
   fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',
 });
 
@@ -22,11 +22,20 @@ const communicator = new Communicator(client);
   communicator.events.on('session:started', async () => {
     console.log('XMPP Client is fully connected');
     console.log('Add friend: ', await communicator.friendship.addFriend('iXyles')); // example of how to add a friend
+    console.log(await communicator.friendship.getFriends()); // get current friends
+    console.log(await communicator.friendship.getIncomingFriendRequests()); // incoming
+    console.log(await communicator.friendship.getOutgoingFriendRequests()); // outgoing
   });
 
   communicator.events.on('friend:request', async (friendrequest) => {
     if (friendrequest.friendStatus === FriendStatus.INCOMING) {
       console.log(friendrequest, await friendrequest.accept());
+    }
+  });
+
+  communicator.events.on('reconnect', async (failure) => {
+    if (failure) {
+      console.log(failure); // reason to why it failed, currently only if token update failed
     }
   });
 
