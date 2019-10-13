@@ -19,7 +19,7 @@ module.exports = class Friendship {
     const { id } = await this.client.lookup.accountLookup(user);
     if (!id) return false;
 
-    const result = await this.client.requester.sendPost(
+    const result = await this.client.requester.sendPost(true,
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
       `bearer ${this.client.authenticator.accessToken}`,
     );
@@ -35,7 +35,7 @@ module.exports = class Friendship {
     const { id } = await this.client.lookup.accountLookup(user);
     if (!id) return false;
 
-    const result = await this.client.requester.sendDelete(
+    const result = await this.client.requester.sendDelete(true,
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
       `bearer ${this.client.authenticator.accessToken}`,
     );
@@ -66,10 +66,9 @@ module.exports = class Friendship {
    */
   async getRawFriends(includePending) {
     try {
-      const result = await this.client.requester.sendGet(
+      const result = await this.client.requester.sendGet(true,
         `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}?includePending=${!!includePending}`,
-        `bearer ${this.client.authenticator.accessToken}`,
-      );
+        `bearer ${this.client.authenticator.accessToken}`);
 
       if (result.error) return [];
 

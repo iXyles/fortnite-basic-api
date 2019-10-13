@@ -22,7 +22,7 @@ module.exports = class Authenticator extends EventEmitter {
     if (token.error) return token;
 
     // Use the redirect to set the bearer token for launcher requests
-    this.client.requester.sendGet('https://www.epicgames.com/id/api/redirect',
+    this.client.requester.sendGet(false, 'https://www.epicgames.com/id/api/redirect',
       null,
       null,
       { Referer: 'https://www.epicgames.com/id/login' });
@@ -44,7 +44,7 @@ module.exports = class Authenticator extends EventEmitter {
     this.setAuthData(fnToken);
 
     // Setup kill hook for the session token - to prevent login issues on restarts
-    if (!this.killHook) {
+    if (this.client.autoKillSession && !this.killHook) {
       exitHook(async (callback) => {
         // eslint-disable-next-line no-console
         await console.info(await this.killCurrentSession());
@@ -62,7 +62,7 @@ module.exports = class Authenticator extends EventEmitter {
    * @returns {object} JSON Object of result
    */
   async getOauthExchangeToken(token) {
-    const res = await this.client.requester.sendGet(Endpoints.OAUTH_EXCHANGE, `bearer ${token}`);
+    const res = await this.client.requester.sendGet(false, Endpoints.OAUTH_EXCHANGE, `bearer ${token}`);
 
     if (res.error || res.code) return res;
     return { error: `[getOauthExchangeToken] Unknown response from gateway ${Endpoints.OAUTH_EXCHANGE}` };
@@ -81,7 +81,7 @@ module.exports = class Authenticator extends EventEmitter {
       token_type: 'eg1',
     };
 
-    const res = await this.client.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.client.fortniteToken}`, dataAuth, undefined, true);
+    const res = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.fortniteToken}`, dataAuth, undefined, true);
 
     if (res.error || res.access_token) return res;
     return { error: `[getFortniteOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
@@ -92,7 +92,7 @@ module.exports = class Authenticator extends EventEmitter {
    * @returns {object} JSON Object of result
    */
   async getOAuthToken(twoStep = false, method) {
-    await this.client.requester.sendGet(Endpoints.CSRF_TOKEN,
+    await this.client.requester.sendGet(false, Endpoints.CSRF_TOKEN,
       undefined, undefined, undefined, false);
     this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
 
@@ -117,7 +117,7 @@ module.exports = class Authenticator extends EventEmitter {
         rememberMe: true,
       };
 
-    const login = await this.client.requester.sendPost(Endpoints.API_LOGIN + (twoStep ? '/mfa' : ''),
+    const login = await this.client.requester.sendPost(false, Endpoints.API_LOGIN + (twoStep ? '/mfa' : ''),
       undefined, dataAuth, headers, true);
 
     if (login && login.error && login.error.metadata && login.error.metadata.twoFactorMethod) {
@@ -126,7 +126,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     if (login && login.error) return login;
 
-    const exchange = await this.client.requester.sendGet(Endpoints.API_EXCHANGE_CODE,
+    const exchange = await this.client.requester.sendGet(false, Endpoints.API_EXCHANGE_CODE,
       undefined, undefined, { 'x-xsrf-token': this.xsrf.value }, false);
 
     const exchangeData = {
@@ -136,7 +136,7 @@ module.exports = class Authenticator extends EventEmitter {
       token_type: 'eg1',
     };
 
-    const res = await this.client.requester.sendPost(Endpoints.OAUTH_TOKEN, `basic ${this.client.launcherToken}`, exchangeData, headers, true);
+    const res = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.launcherToken}`, exchangeData, headers, true);
 
     if (res.error || res.access_token) return res;
     return { error: `[getOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
@@ -182,7 +182,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     if (!this.refreshing) {
       this.refreshing = true;
-      refresh = await this.client.requester.sendPost(Endpoints.OAUTH_TOKEN,
+      refresh = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
         `basic ${this.client.fortniteToken}`, data, undefined, true);
       this.emit('token_refresh', refresh);
     } else {
@@ -209,7 +209,7 @@ module.exports = class Authenticator extends EventEmitter {
   async killCurrentSession() {
     if (!this.accessToken) return { error: 'Cannot kill the session due to no accessToken set.' };
 
-    const res = await this.client.requester.sendDelete(`${Endpoints.OAUTH_KILL_SESSION}/${this.accessToken}`, `bearer ${this.accessToken}`, {}, undefined, true);
+    const res = await this.client.requester.sendDelete(true, `${Endpoints.OAUTH_KILL_SESSION}/${this.accessToken}`, `bearer ${this.accessToken}`, {}, undefined, true);
     if (!res) return { success: '[fortnite-basic-api] Client session has been killed.' };
     if (res.error) return res;
     return { error: `[killCurrentSession] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
@@ -234,7 +234,7 @@ module.exports = class Authenticator extends EventEmitter {
    * along result data if new agreement found and `accepted` is false
    */
   async checkEULA(login) {
-    this.entitlements = await this.client.requester.sendGet(
+    this.entitlements = await this.client.requester.sendGet(false,
       `${Endpoints.ENTITLEMENTS}/${login.account_id}/entitlements?start=0&count=5000`,
       `bearer ${login.access_token}`,
     );
@@ -245,7 +245,7 @@ module.exports = class Authenticator extends EventEmitter {
       return success ? this.checkEULA(login) : { accepted: false, error: 'Purchase failed.' };
     }
 
-    const result = await this.client.requester.sendGet(
+    const result = await this.client.requester.sendGet(false,
       `${Endpoints.EULA}/fn/account/${login.account_id}?locale=en`,
       `bearer ${login.access_token}`,
     );
@@ -263,7 +263,7 @@ module.exports = class Authenticator extends EventEmitter {
    * @param {boolean} if agreement was sucessfully accepted or not
    */
   async acceptEULA(login, eula) {
-    const result = await this.client.requester.sendPost(
+    const result = await this.client.requester.sendPost(false,
       `${Endpoints.EULA}/${eula.key}/version/${eula.version}/account/${login.account_id}/accept?locale=en`,
       `bearer ${login.access_token}`,
     );
@@ -286,7 +286,7 @@ module.exports = class Authenticator extends EventEmitter {
       }],
     };
 
-    const prepare = await this.client.requester.sendPost(
+    const prepare = await this.client.requester.sendPost(false,
       `${Endpoints.ORDER_PURCHASE}/${login.account_id}/orders/quickPurchase`,
       `bearer ${login.access_token}`,
       offer,
@@ -294,7 +294,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     if (prepare.quickPurchaseStatus !== 'CHECKOUT') return false; // something went wrong.
 
-    const purchase = await this.client.requester.sendGet(
+    const purchase = await this.client.requester.sendGet(false,
       `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}`,
     );
 

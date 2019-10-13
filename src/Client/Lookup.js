@@ -30,7 +30,7 @@ module.exports = class Lookup {
     const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const account = await this.client.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(username)}`, `bearer ${this.client.authenticator.accessToken}`);
+    const account = await this.client.requester.sendGet(true, `${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(username)}`, `bearer ${this.client.authenticator.accessToken}`);
 
     if (account.error) return account;
     if (!account.id) return { error: 'No username with the name could be found.' };
@@ -46,7 +46,7 @@ module.exports = class Lookup {
     const check = await this.client.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const account = await this.client.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${accountId}`, `bearer ${this.client.authenticator.accessToken}`);
+    const account = await this.client.requester.sendGet(true, `${Endpoints.ACCOUNT}?accountId=${accountId}`, `bearer ${this.client.authenticator.accessToken}`);
 
     if (account.error) return account;
     if (account.length === 0) return { error: 'No username with the name could be found.' };
@@ -67,14 +67,14 @@ module.exports = class Lookup {
 
     for (let u = accountIds.length - 1; u >= 0; u -= 1) {
       if (Utils.isDisplayName(accountIds[u])) {
-        requests.push(this.client.requester.sendGet(`${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(accountIds[u])}`, `bearer ${this.client.authenticator.accessToken}`));
+        requests.push(this.client.requester.sendGet(true, `${Endpoints.ACCOUNT_BY_NAME}/${encodeURI(accountIds[u])}`, `bearer ${this.client.authenticator.accessToken}`));
         accountIds.splice(u, 1);
       }
     }
 
     for (i = 0, j = accountIds.length; i < j; i += chunk) {
       const temp = accountIds.slice(i, i + chunk);
-      requests.push(this.client.requester.sendGet(`${Endpoints.ACCOUNT}?accountId=${temp.join('&accountId=')}`, `bearer ${this.client.authenticator.accessToken}`));
+      requests.push(this.client.requester.sendGet(true, `${Endpoints.ACCOUNT}?accountId=${temp.join('&accountId=')}`, `bearer ${this.client.authenticator.accessToken}`));
     }
 
     const parallel = await Promise.all(requests);

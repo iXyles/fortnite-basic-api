@@ -21,8 +21,8 @@ module.exports = class Stats {
 
     // Request all the stats
     const promises = [];
-    promises.push(this.client.requester.sendGet(`${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/alltime`, `bearer ${this.client.auths.accessToken}`));
-    promises.push(this.client.requester.sendGet(`${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/weekly`, `bearer ${this.client.auths.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/alltime`, `bearer ${this.client.auths.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V1}/${account.id}/bulk/window/weekly`, `bearer ${this.client.auths.accessToken}`));
     const result = await Promise.all(promises);
 
     if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };
@@ -48,8 +48,8 @@ module.exports = class Stats {
 
     // Request all the stats
     const promises = [];
-    promises.push(this.client.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.client.auths.accessToken}`));
-    promises.push(this.client.requester.sendGet(`${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.client.seasonStartTime}`, `bearer ${this.client.auths.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.client.auths.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.client.seasonStartTime}`, `bearer ${this.client.auths.accessToken}`));
     const result = await Promise.all(promises);
 
     if (!result[0]) return { error: `Could not retrieve stats from user ${account.displayName}, because of private leaderboard settings.`, user: account };

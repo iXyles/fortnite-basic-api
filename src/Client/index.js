@@ -9,12 +9,13 @@ module.exports = class Client {
   constructor(args = {}) {
     this.email = args.email || undefined;
     this.password = args.password || undefined;
-    this.launcherToken = args.launcherToken || undefined;
-    this.fortniteToken = args.fortniteToken || undefined;
-    this.seasonStartTime = args.seasonStartTime || '1564657200'; // S10 EPOCH
+    this.launcherToken = args.launcherToken || 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=';
+    this.fortniteToken = args.fortniteToken || 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=';
+    this.seasonStartTime = args.seasonStartTime || '157099000'; // S11 EPOCH
     if (!this.email || !this.password || !this.launcherToken || !this.fortniteToken) {
       throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
     }
+    this.autoKillSession = args.autokill !== undefined ? args.autokill : true;
 
     this.requester = new Requester(this);
     this.authenticator = new Authenticator(this);
@@ -42,7 +43,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const status = await this.requester.sendGet(Endpoints.SERVER_STATUS, `bearer ${this.auths.accessToken}`);
+    const status = await this.requester.sendGet(true, Endpoints.SERVER_STATUS, `bearer ${this.auths.accessToken}`);
 
     return (status && status[0] && status[0].status && status[0].status === 'UP');
   }
@@ -55,7 +56,7 @@ module.exports = class Client {
    * @returns {object} JSON Object of the result
    */
   async getBRNews(language = 'en') {
-    return this.requester.sendGet(`${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(false, `${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.auths.accessToken}`);
   }
 
   /**
@@ -66,7 +67,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(Endpoints.BR_STORE, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.BR_STORE, `bearer ${this.auths.accessToken}`);
   }
 
   /**
@@ -77,7 +78,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(Endpoints.PVE_INFO, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.PVE_INFO, `bearer ${this.auths.accessToken}`);
   }
 
   /**
@@ -88,6 +89,6 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
   }
 };

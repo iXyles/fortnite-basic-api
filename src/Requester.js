@@ -15,7 +15,11 @@ module.exports = class Requester {
     this.request = Request.defaults(this.options);
   }
 
-  async send(method, url, auth, data, headers, form) {
+  async send(checkToken, method, url, auth, data, headers, form) {
+    if (checkToken) {
+      const check = await this.client.authenticator.checkToken();
+      if (!check.tokenValid) return check;
+    }
     try {
       const options = {
         ...this.options,
@@ -43,15 +47,15 @@ module.exports = class Requester {
     }
   }
 
-  async sendGet(url, auth, data, headers, form) {
-    return this.send('GET', url, auth, data, headers, form);
+  async sendGet(tokenCheck, url, auth, data, headers, form) {
+    return this.send(tokenCheck, 'GET', url, auth, data, headers, form);
   }
 
-  async sendPost(url, auth, data, headers, form) {
-    return this.send('POST', url, auth, data, headers, form);
+  async sendPost(tokenCheck, url, auth, data, headers, form) {
+    return this.send(tokenCheck, 'POST', url, auth, data, headers, form);
   }
 
-  async sendDelete(url, auth, data, headers, form) {
-    return this.send('DELETE', url, auth, data, headers, form);
+  async sendDelete(tokenCheck, url, auth, data, headers, form) {
+    return this.send(tokenCheck, 'DELETE', url, auth, data, headers, form);
   }
 };
