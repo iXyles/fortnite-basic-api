@@ -173,7 +173,9 @@ module.exports = class CommunicatorEvents extends EventEmitter {
    */
   onFriendRequestAccepted(data) {
     const friend = new Friend(this.communicator, {
-      accountId: data.to,
+      accountId: this.communicator.client.authenticator.accountId === data.from
+        ? data.to
+        : data.from,
       friendStatus: FriendStatus.ACCEPTED,
     });
 
@@ -187,7 +189,9 @@ module.exports = class CommunicatorEvents extends EventEmitter {
    */
   onFriendRemoval(data) {
     const friend = new Friend(this.communicator, {
-      accountId: data.to,
+      accountId: this.communicator.client.authenticator.accountId === data.from
+        ? data.to
+        : data.from,
       friendStatus: data.reason === 'ABORTED'
         ? FriendStatus.ABORTED
         : data.reason === 'REJECTED'
