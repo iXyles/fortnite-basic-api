@@ -184,6 +184,7 @@ module.exports = class Authenticator extends EventEmitter {
       this.refreshing = true;
       refresh = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
         `basic ${this.client.fortniteToken}`, data, undefined, true);
+      this.refreshing = false;
       this.emit('token_refresh', refresh);
     } else {
       try {
