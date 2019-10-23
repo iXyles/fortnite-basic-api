@@ -28,7 +28,7 @@ module.exports = class CommunicatorEvents extends EventEmitter {
     this.communicator.stream.on('presence', this.onPresenceUpdate.bind(this));
     this.communicator.stream.on('message', this.onStreamMessage.bind(this));
 
-    this.communicator.client.authenticator.on('auths_updated', this.communicator.performRefreshLogin.bind(this));
+    this.communicator.client.authenticator.on('auths_updated', this.communicator.performRefreshLogin.bind(this.communicator));
 
     this.eventsRegistered = true;
   }

@@ -144,7 +144,7 @@ module.exports = class Authenticator extends EventEmitter {
 
   /**
    * Check if the current token has expired or not
-   * If it has expired it will force a `refreshToken()`
+   * If it has expired it will force a `updateToken()`
    * @returns {object} JSON Object of result `tokenValid, error(optional)`
    */
   async checkToken() {
@@ -154,7 +154,7 @@ module.exports = class Authenticator extends EventEmitter {
     const expireDate = new Date(new Date(this.expiresAt).getTime() - 15 * 60000);
 
     if (this.accessToken && this.expiresAt && expireDate < actualDate) {
-      const refresh = await this.refreshToken();
+      const refresh = await this.updateToken();
       if (refresh.error) return { tokenValid: false, error: 'Failed refreshing token on checkToken()' };
     }
 
@@ -165,7 +165,7 @@ module.exports = class Authenticator extends EventEmitter {
    * Refresh the accessToken of the `Client`
    * @returns {object} JSON Object of result
    */
-  async refreshToken() {
+  async updateToken() {
     if (!this.refreshToken) return { error: 'Cannot refresh the token due to no refreshToken set.' };
 
     // remove it so the "checkToken()" can validated
@@ -184,6 +184,7 @@ module.exports = class Authenticator extends EventEmitter {
       this.refreshing = true;
       refresh = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
         `basic ${this.client.fortniteToken}`, data, undefined, true);
+      this.refreshing = false;
       this.emit('token_refresh', refresh);
     } else {
       try {
@@ -199,7 +200,7 @@ module.exports = class Authenticator extends EventEmitter {
       this.setAuthData(refresh); // Setup tokens from refresh
       return { success: true };
     }
-    return { error: `[refreshToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
+    return { error: `[updateToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
   }
 
   /**
@@ -216,7 +217,7 @@ module.exports = class Authenticator extends EventEmitter {
   }
 
   /**
-   * Set auth data from login() or refreshToken() input
+   * Set auth data from login() or updateToken() input
    */
   setAuthData(data) {
     this.expiresAt = data.expires_at;
