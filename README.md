@@ -21,13 +21,15 @@ Example usage:
 ```
 const { Client, Communicator, FriendStatus } = require('fortnite-basic-api');
 
-// Creation of the Client
+// Creation of the Client, autokill will kill the session when client is disposed. 
+// If you are not giving any tokens it will use the default ones that are needed.
 const client = new Client({
   email: '',
   password: '',
   launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
   fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',
-});
+  autokill: true,
+}); 
 
 // Creation of communicator
 const communicator = new Communicator(client);

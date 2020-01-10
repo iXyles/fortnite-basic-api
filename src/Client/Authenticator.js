@@ -120,6 +120,10 @@ module.exports = class Authenticator extends EventEmitter {
     const login = await this.client.requester.sendPost(false, Endpoints.API_LOGIN + (twoStep ? '/mfa' : ''),
       undefined, dataAuth, headers, true);
 
+    if (login && login.error && login.error.errorCode === 'errors.com.epicgames.accountportal.session_invalidated') {
+      return this.getOAuthToken();
+    }
+
     if (login && login.error && login.error.metadata && login.error.metadata.twoFactorMethod) {
       return this.getOAuthToken(true, login.error.metadata.twoFactorMethod);
     }
