@@ -1,14 +1,14 @@
 /* eslint-disable no-console */
 const { Client, Communicator, FriendStatus } = require('../index.js');
+const fs = require('fs');
 
 // Creation of the Client, autokill will kill the session when client is disposed. 
 // If you are not giving any tokens it will use the default ones that are needed.
 const client = new Client({
   email: '',
   password: '',
-  launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
-  fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',
-  autokill: true,
+  deviceAuth: () => JSON.parse(fs.readFileSync('./deviceauth.json', 'utf-8')),
+  deleteOtherDeviceAuths: true
 });
 
 // Creation of communicator
@@ -18,6 +18,7 @@ const communicator = new Communicator(client);
 (async () => {
   // Perform the login process of the "client"
 
+  client.authenticator.on('device_auth_created', d => fs.writeFileSync('./deviceauth.json', JSON.stringify(d)));
   console.log(await client.login());
 
   // Setup communicator events

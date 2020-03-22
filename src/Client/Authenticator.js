@@ -18,8 +18,57 @@ module.exports = class Authenticator extends EventEmitter {
    * @return {object} JSON Object of login result
    */
   async login() {
-    const token = await this.getOAuthToken();
-    if (token.error) return token;
+    if(this.client.createNewDeviceAuth) {
+      const deviceauth = await this.createDeviceAuth();
+      if(!deviceauth.success) return deviceauth.response;
+    }
+
+    let token;
+
+    if(this.client.deviceAuth) {
+      const deviceAuthDetails = typeof this.client.deviceAuth === 'function' ? await this.client.deviceAuth() : this.client.deviceAuth;
+      const exchangeData = {
+        grant_type: 'device_auth',
+        account_id: deviceAuthDetails["accountId"],
+        device_id: deviceAuthDetails["deviceId"],
+        secret: deviceAuthDetails["secret"],
+      };
+  
+      token = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.iosToken}`, exchangeData, {'Content-Type': 'application/x-www-form-urlencoded'}, true);
+      if(token.error) return token;
+      this.setAuthData(token);
+      if(this.client.deleteOtherDeviceAuths) {
+        const deleteOthers = await this.deleteAllDeviceAuths([deviceAuthDetails.deviceId]);
+        if(deleteOthers.error) return deleteOthers;
+      }
+      // Setup kill hook for the session token - to prevent login issues on restarts
+      if (this.client.autoKillSession && !this.killHook) {
+        exitHook(async (callback) => {
+          // eslint-disable-next-line no-console
+          await console.info(await this.killCurrentSession());
+          callback();
+        });
+        this.killHook = true;
+    }
+
+    return { success: true }; // successful login
+    }
+    else if(this.client.exchangeCode) {
+      const exchangeCode = typeof this.client.deviceAuth === 'function' ? await this.client.exchangeCode() : this.client.exchangeCode;
+      const exchangeData = {
+        grant_type: 'exchange_code',
+        exchange_code: exchangeCode,
+        includePerms: true,
+        token_type: 'eg1',
+      };
+  
+      token = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.launcherToken}`, exchangeData, {'Content-Type': 'application/x-www-form-urlencoded'}, true);
+      if(token.error) return token;
+    }
+    else{
+      token = await this.getOAuthToken();
+      if(token.error) return token;
+    }
 
     // Use the redirect to set the bearer token for launcher requests
     this.client.requester.sendGet(false, 'https://www.epicgames.com/id/api/redirect',
@@ -54,6 +103,47 @@ module.exports = class Authenticator extends EventEmitter {
     }
 
     return { success: true }; // successful login
+  }
+
+  async createDeviceAuth() {
+    let exchangeCode = typeof this.client.exchangeCode === 'function' ? await this.client.exchangeCode() : this.client.exchangeCode;
+    if(!exchangeCode) {
+      exchangeCode = await this.getOAuthToken(false, undefined, true);
+      if(exchangeCode.error) return {success: false, response: exchangeCode.error};
+    }
+
+    const exchangeData = {
+      grant_type: 'exchange_code',
+      exchange_code: exchangeCode,
+      includePerms: true,
+      token_type: 'eg1',
+    };
+
+    const res = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.iosToken}`, exchangeData, {'Content-Type': 'application/x-www-form-urlencoded'}, true);
+    if (res.error) return {success: false, response: res.error};
+
+    const deviceAuthDetails = await this.client.requester.sendPost(false, `${Endpoints.DEVICE_AUTH}/${res.account_id}/deviceAuth`, `bearer ${res.access_token}`);
+    if(deviceAuthDetails.error) return {success: false, response: deviceAuthDetails.error};
+    console.log(deviceAuthDetails);
+    this.client.deviceAuth = {
+      deviceId: deviceAuthDetails.deviceId,
+      accountId: deviceAuthDetails.accountId,
+      secret: deviceAuthDetails.secret
+    }
+    this.emit('device_auth_created', this.client.deviceAuth);
+    return {success: true, response: this.client.deviceAuth};
+  }
+
+  async deleteAllDeviceAuths(dontDeleteIds = []) {
+    const existingDeviceAuths = await this.client.requester.sendGet(true, `${Endpoints.DEVICE_AUTH}/${this.accountId}/deviceAuth`, `bearer ${this.accessToken}`);
+    if(existingDeviceAuths.error) return existingDeviceAuths;
+
+    for(var i = 0; i < existingDeviceAuths.length; i++) {
+      if(dontDeleteIds.includes(existingDeviceAuths[i].deviceId)) continue;
+      const deletedAuth = await this.client.requester.sendDelete(false, `${Endpoints.DEVICE_AUTH}/${this.accountId}/deviceAuth/${existingDeviceAuths[i].deviceId}`, `bearer ${this.accessToken}`);
+      if(deletedAuth && deletedAuth.error) return deletedAuth;
+    }
+    return {success: true};
   }
 
   /**
@@ -91,7 +181,7 @@ module.exports = class Authenticator extends EventEmitter {
    * Perform login and get the OAuth token for the launcher
    * @returns {object} JSON Object of result
    */
-  async getOAuthToken(twoStep = false, method) {
+  async getOAuthToken(twoStep = false, method, returnExchange = false) {
     await this.client.requester.sendGet(false, Endpoints.CSRF_TOKEN,
       undefined, undefined, undefined, false);
     this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
@@ -132,6 +222,8 @@ module.exports = class Authenticator extends EventEmitter {
 
     const exchange = await this.client.requester.sendGet(false, Endpoints.API_EXCHANGE_CODE,
       undefined, undefined, { 'x-xsrf-token': this.xsrf.value }, false);
+    
+    if(returnExchange) return exchange.code
 
     const exchangeData = {
       grant_type: 'exchange_code',
@@ -243,7 +335,7 @@ module.exports = class Authenticator extends EventEmitter {
       `${Endpoints.ENTITLEMENTS}/${login.account_id}/entitlements?start=0&count=5000`,
       `bearer ${login.access_token}`,
     );
-
+    console.log(this.entitlements)
     const owngame = this.entitlements.find(s => s.entitlementName === 'Fortnite_Free');
     if (!owngame) {
       const success = await this.purchaseFortnite(login);
