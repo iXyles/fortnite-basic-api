@@ -18,7 +18,7 @@ V1.3.0 Changed location of where you find "lookup, stats, authenticator" data, c
 V1.3.2 Change the launcher token to the given on in the example below or else it will not work.
 
 Example usage: 
-```
+```js
 const { Client, Communicator, FriendStatus } = require('fortnite-basic-api');
 
 // Creation of the Client, autokill will kill the session when client is disposed. 
