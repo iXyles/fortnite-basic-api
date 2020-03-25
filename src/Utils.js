@@ -1,5 +1,5 @@
 const readline = require('readline');
-const UUID = require('uuid/v4');
+const uuid = require('uuid');
 
 const { JID } = require('../resources/JID');
 const Endpoints = require('../resources/Endpoints');
@@ -35,7 +35,7 @@ module.exports.makeJID = accountId => new JID(`${accountId}@${Endpoints.EPIC_PRO
  * Generate a UUID
  * @return {string} String uppercase GUID without "-" inside of it.
  */
-module.exports.generateUUID = () => UUID().replace(/-/g, '').toUpperCase();
+module.exports.generateUUID = () => uuid.v4().replace(/-/g, '').toUpperCase();
 
 /**
  * Wait and resolve for a specific event
@@ -53,4 +53,25 @@ module.exports.resolveEvent = (instance, event, time, filter) => {
     });
     setTimeout(() => reject(new Error(`Waiting for event timeout exceeded: ${timeout} ms`)), timeout);
   });
+};
+
+/**
+ * Custom string splitter to add rest of the string back
+ * if the limit is shorter than full split
+ * @param {string} str The string to split
+ * @param {string} separator The seperator to split the string with
+ * @param {number} limit Number of splits with the separator
+ * @returns {array} Array of strings of the split
+ */
+module.exports.stringSplit = (str, separator, limit) => {
+  const split = str.split(separator);
+
+  if (split.length > limit) {
+    const ret = split.splice(0, limit);
+    ret.push(split.join(separator));
+
+    return ret;
+  }
+
+  return str;
 };

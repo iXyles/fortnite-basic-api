@@ -4,16 +4,22 @@ const Requester = require('../Requester.js');
 const Authenticator = require('./Authenticator.js');
 const Lookup = require('./Lookup.js');
 const Stats = require('./Stats.js');
+const Utils = require('../Utils.js');
 
 module.exports = class Client {
   constructor(args = {}) {
     this.email = args.email || undefined;
     this.password = args.password || undefined;
+    this.useDeviceAuth = args.useDeviceAuth || false;
+    this.deviceAuthPath = args.deviceAuthPath || './fbadeviceauths.json';
+    this.removeOldDeviceAuths = args.removeOldDeviceAuths || false;
     this.launcherToken = args.launcherToken || 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=';
     this.fortniteToken = args.fortniteToken || 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=';
-    this.seasonStartTime = args.seasonStartTime || '1570990000'; // S11 EPOCH
-    if (!this.email || !this.password || !this.launcherToken || !this.fortniteToken) {
-      throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
+    this.iosToken = args.iosToken || 'MzQ0NmNkNzI2OTRjNGE0NDg1ZDgxYjc3YWRiYjIxNDE6OTIwOWQ0YTVlMjVhNDU3ZmI5YjA3NDg5ZDMxM2I0MWE=';
+    this.seasonStartTime = args.seasonStartTime || '1582185600'; // S12 (Chapter 2 Season 2) EPOCH
+    if (!this.email || (!this.password && !this.useDeviceAuth) || 
+        !this.launcherToken || !this.fortniteToken || !this.iosToken) {
+      throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken, iosToken] check docs.');
     }
     this.autoKillSession = args.autokill !== undefined ? args.autokill : true;
 
@@ -21,18 +27,35 @@ module.exports = class Client {
     this.authenticator = new Authenticator(this);
     this.lookup = new Lookup(this);
     this.stats = new Stats(this);
+  }
 
-    // To keep backwards compability for old version (to a certain degree)
-    // Authentications
-    this.login = async () => this.authenticator.login();
-    this.auths = this.authenticator;
+  /**
+   * Creates and saves a device auth
+   * Must perform login afterwards
+   */
+  async createDeviceAuthFromExchangeCode() {
+    const code = await Utils.consolePrompt('To generate device auth, please provide an exchange code: ');
+    await this.requester.sendGet(false, Endpoints.CSRF_TOKEN);
+    const xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
+    if (!xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
 
-    // Stats
-    this.getV1Stats = async user => this.stats.getV1Stats(user);
-    this.getV2Stats = async user => this.stats.getV2Stats(user);
+    const headers = {
+      'x-xsrf-token': xsrf.value,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    const exchangeData = {
+      grant_type: 'exchange_code',
+      exchange_code: code,
+      includePerms: true,
+      token_type: 'eg1',
+    };
 
-    // Lookups
-    this.accountLookup = async account => this.lookup.accountLookup(account);
+    const res = await this.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
+      `basic ${this.iosToken}`, exchangeData, headers, true);
+    if (res.error) return res;
+
+    const create = this.authenticator.createDeviceAuthWithExchange(res);
+    return create; // The result of the creation
   }
 
   /**
@@ -43,7 +66,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    const status = await this.requester.sendGet(true, Endpoints.SERVER_STATUS, `bearer ${this.auths.accessToken}`);
+    const status = await this.requester.sendGet(true, Endpoints.SERVER_STATUS, `bearer ${this.authenticator.accessToken}`);
 
     return (status && status[0] && status[0].status && status[0].status === 'UP');
   }
@@ -56,7 +79,7 @@ module.exports = class Client {
    * @returns {object} JSON Object of the result
    */
   async getBRNews(language = 'en') {
-    return this.requester.sendGet(false, `${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(false, `${Endpoints.BR_NEWS}?lang=${language}`, `bearer ${this.authenticator.accessToken}`);
   }
 
   /**
@@ -67,7 +90,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(true, Endpoints.BR_STORE, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.BR_STORE, `bearer ${this.authenticator.accessToken}`);
   }
 
   /**
@@ -78,7 +101,7 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(true, Endpoints.PVE_INFO, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.PVE_INFO, `bearer ${this.authenticator.accessToken}`);
   }
 
   /**
@@ -89,6 +112,6 @@ module.exports = class Client {
     const check = await this.authenticator.checkToken();
     if (!check.tokenValid) return check;
 
-    return this.requester.sendGet(true, Endpoints.EVENT_FLAGS, `bearer ${this.auths.accessToken}`);
+    return this.requester.sendGet(true, Endpoints.EVENT_FLAGS, `bearer ${this.authenticator.accessToken}`);
   }
 };

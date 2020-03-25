@@ -1,62 +1,6 @@
-const GameModes = require('../../enums/GameModes');
-
-/**
- * Custom string splitter to add rest of the string back
- * if the limit is shorter than full split
- * @param {string} str The string to split
- * @param {string} separator The seperator to split the string with
- * @param {number} limit Number of splits with the separator
- * @returns {array} Array of strings of the split
- */
-function stringSplit(str, separator, limit) {
-  const split = str.split(separator);
-
-  if (split.length > limit) {
-    const ret = split.splice(0, limit);
-    ret.push(split.join(separator));
-
-    return ret;
-  }
-
-  return str;
-}
+const Utils = require('../Utils.js');
 
 module.exports = class Converter {
-  /**
-   * Converts the data from epics stats endpoint V1
-   * to a more readable format and grouping the stats accordingly
-   * @param {object} data The JSON data from the API Endpoint of V1
-   * @returns {object} JSON Object of the converted data
-   */
-  static convertV1(data) {
-    const result = {};
-
-    // less iterations
-    const allStats = {};
-    const modes = {}; // to track found game modes, incase they update the API.
-    const allVariables = {}; // to track all variables
-
-    // parse the default data so it's more 'readable'
-    Object.keys(data).forEach((index) => {
-      const row = data[index];
-
-      if (!row.name) return; // random return of "null" from epic endpoint.
-      const parts = row.name.split('_');
-
-      // the needeed parts - Easier to see what is what.
-      const varName = parts[1];
-      const platform = parts[2];
-      const gamemode = GameModes[parts[4]];
-
-      this.extractData(result, modes, allVariables,
-        allStats, gamemode, varName, row.value, platform);
-    });
-
-    this.parseStats(result, allStats, allVariables, modes, false);
-
-    return result;
-  }
-
   /**
    * Converts the data from epics stats endpoint V2
    * to a more readable format and grouping the stats accordingly
@@ -74,7 +18,7 @@ module.exports = class Converter {
     const allVariables = {}; // to track all variables
 
     Object.keys(stats).forEach((key) => {
-      const parts = stringSplit(key, '_', 5);
+      const parts = Utils.stringSplit(key, '_', 5);
 
       if (parts[0] !== 'br') return; // safty check
 
@@ -86,7 +30,7 @@ module.exports = class Converter {
         allStats, gamemode, varName, stats[key], inputType);
     });
 
-    this.parseStats(result, allStats, allVariables, modes, true);
+    this.parseStats(result, allStats, allVariables, modes);
 
     return result;
   }
@@ -132,9 +76,8 @@ module.exports = class Converter {
    * @param {object} allStats JSON Object to store all "values" to & use
    * @param {object} allVariables JSON Object of all variables
    * @param {object} modes JSON Object of all found game modes
-   * @param {boolean} statsv2 Parsing V2 stats or not
    */
-  static parseStats(result, allStats, allVariables, modes, statsv2) {
+  static parseStats(result, allStats, allVariables, modes) {
     Object.assign(result, { all: allStats });
 
     Object.keys(result).forEach((input) => {
@@ -143,8 +86,7 @@ module.exports = class Converter {
       Object.keys(allVariables).forEach((variable) => {
         let value = 0;
         Object.keys(modes).forEach((mode) => {
-          // ignore creative and playground stats if statsv2
-          if (statsv2 && (mode === 'playground' || mode === 'creative_playonly')) return;
+          if (mode === 'playground' || mode === 'creative_playonly') return;
 
           if (result[input][mode] && result[input][mode][variable]) {
             if (variable !== 'lastmodified') value += result[input][mode][variable];
