@@ -8,11 +8,11 @@ const { Client, Communicator, FriendStatus } = require('../index.js'); // this s
 // Remember that you must be logged in with the account you want at https://epicgames.com
 // AND BE CAREFUL! The generated code bypasses all 2FA logins & credentials, so do not share it.
 const client = new Client({
-  email: process.env.FORTNITE_EMAIL, // PLEASE USE ENV VARIABLES!
-  password: process.env.FORTNITE_PASSWORD, // PLEASE USE ENV VARIABLES!
+  email: process.env.FORTNITE_EMAIL, // Should be same as the account logging in!
+  //password: process.env.FORTNITE_PASSWORD,- Since we are using deviceAuth this is not required
   useDeviceAuth: true,
   removeOldDeviceAuths: true,
-  // deviceAuthPath: './path.../file.json'; // Default is './fbadeviceauths.json'; ()
+  deviceAuthPath: './fbadeviceauths.json', // Default is './fbadeviceauths.json'
   // You should not have to update any of the tokens.
   launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
   fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',

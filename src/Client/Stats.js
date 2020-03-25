@@ -21,8 +21,8 @@ module.exports = class Stats {
 
     // Request all the stats
     const promises = [];
-    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.client.auths.accessToken}`));
-    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.client.seasonStartTime}`, `bearer ${this.client.auths.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}`, `bearer ${this.client.authenticator.accessToken}`));
+    promises.push(this.client.requester.sendGet(true, `${Endpoints.STATS_BR_V2}/${account.id}?startTime=${this.client.seasonStartTime}`, `bearer ${this.client.authenticator.accessToken}`));
     const result = await Promise.all(promises);
 
     if (result === null || result === undefined) return { error: 'No stats could be retrieved, Fortnite stats might be offline or inaccessible' };

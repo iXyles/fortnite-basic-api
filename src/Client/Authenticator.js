@@ -50,7 +50,7 @@ module.exports = class Authenticator extends EventEmitter {
     }
 
     if (!this.deviceId || !this.deviceAccountId || !this.deviceSecret) {
-      const create = await this.createDeviceAuth();
+      const create = await this.createSessionDeviceAuth();
       if (create.error) return create;
     }
 
@@ -109,12 +109,19 @@ module.exports = class Authenticator extends EventEmitter {
   /**
    * Generate a new DeviceAuth and set it to the current session
    */
-  async createDeviceAuth() {
-    const launcherToken = await this.getOAuthToken(false, '', true);
-    if (launcherToken.error) return { success: false, error: launcherToken.error };
+  async createSessionDeviceAuth() {
+    const token = await this.getOAuthToken(false, '', true);
+    if (token.error) return { success: false, error: token.error };
 
+    return this.createDeviceAuthWithExchange(token);
+  }
+
+  /**
+   * Generate a new DeviceAuth and set it to the current session
+   */
+  async createDeviceAuthWithExchange(token) {
     const deviceAuthDetails = await this.client.requester.sendPost(false,
-      `${Endpoints.DEVICE_AUTH}/${launcherToken.account_id}/deviceAuth`, `bearer ${launcherToken.access_token}`);
+      `${Endpoints.DEVICE_AUTH}/${token.account_id}/deviceAuth`, `bearer ${token.access_token}`);
     if (deviceAuthDetails.error) return { success: false, error: deviceAuthDetails.error };
 
     this.deviceId = deviceAuthDetails.deviceId;
