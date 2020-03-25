@@ -13,7 +13,7 @@ module.exports = Object.freeze({
   EULA: 'https://eulatracking-public-service-prod06.ol.epicgames.com/eulatracking/api/public/agreements',
   ENTITLEMENTS: 'https://entitlement-public-service-prod08.ol.epicgames.com/entitlement/api/account',
   ORDER_PURCHASE: 'https://orderprocessor-public-service-ecomprod01.ol.epicgames.com/orderprocessor/api/shared/accounts',
-  CAPTCHA_PURCHASE: 'https://launcher-website-prod07.ol.epicgames.com/purchase',
+  CAPTCHA_PURCHASE: 'https://www.epicgames.com/store/purchase',
   DEVICE_AUTH: 'https://account-public-service-prod.ol.epicgames.com/account/api/public/account',
 
   // ACCOUNT

@@ -408,8 +408,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     const owngame = this.entitlements.find(s => s.entitlementName === 'Fortnite_Free');
     if (!owngame) {
-      const success = await this.purchaseFortnite(login);
-      return success ? this.checkEULA(login) : { accepted: false, error: 'Purchase failed.' };
+      return { accepted: false, error: 'You must purchase the game manually by logging in on the account.' };
     }
 
     const result = await this.client.requester.sendGet(false,
@@ -436,6 +435,7 @@ module.exports = class Authenticator extends EventEmitter {
   }
 
   /**
+   * [BROKEN]
    * Purchase fortnite game for free
    * @return {boolean} if purchase was successful or not
    */
@@ -455,16 +455,13 @@ module.exports = class Authenticator extends EventEmitter {
       `${Endpoints.ORDER_PURCHASE}/${login.account_id}/orders/quickPurchase`,
       `bearer ${login.access_token}`,
       offer);
-    console.log(prepare); // TODO : for debug purpose
 
     if (prepare.quickPurchaseStatus !== 'CHECKOUT') return false; // something went wrong.
 
     const purchase = await this.client.requester.sendGet(false,
-      `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}`);
-    console.log(purchase); // TODO : for debug purpose
+      `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}#/purchase/verify?_k=jk77oe`);
 
     const token = purchase.match(/<input(?:.*?)id=\"purchaseToken\"(?:.*)value=\"([^"]+).*>/)[1];
-    console.log(token); // TODO : for debug purpose
 
     return token && prepare.quickPurchaseStatus ? prepare.quickPurchaseStatus === 'CHECKOUT' : false;
   }
