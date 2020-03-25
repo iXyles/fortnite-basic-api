@@ -1,5 +1,6 @@
 const exitHook = require('async-exit-hook');
 const EventEmitter = require('events');
+const fsp = require('fs').promises;
 
 const Endpoints = require('../../resources/Endpoints');
 const Utils = require('../Utils.js');
@@ -17,59 +18,84 @@ module.exports = class Authenticator extends EventEmitter {
    * Perform the login process of the `Client`
    * @return {object} JSON Object of login result
    */
-  async login(skipDeviceAuth = false) {
-    let fnToken;
+  async login() {
+    const token = this.client.useDeviceAuth
+      ? await this.getTokenWithDeviceAuth()
+      : await this.getTokenWithLoginCreds();
 
-    if (this.client.deviceAuthOptions.createNew) {
-      const deviceauth = await this.createDeviceAuth();
-      if (deviceauth.error) return deviceauth;
+    if (token.error) return token;
+
+    this.setAuthData(token); // Set authdata
+    this.setupAutoKill(); // Check & Setup autokill session
+
+    if (this.deviceId && this.client.removeOldDeviceAuths) {
+      const killAuths = await this.killDeviceAuths();
+      if (!killAuths.success) return killAuths;
     }
 
-    if (this.client.deviceAuthDetails && !skipDeviceAuth) {
-      const deviceAuthDetails = typeof this.client.deviceAuthDetails === 'function' ? await this.client.deviceAuthDetails() : this.client.deviceAuthDetails;
-      if (!deviceAuthDetails || !deviceAuthDetails.secret) return this.login(true);
-      const exchangeData = {
-        grant_type: 'device_auth',
-        account_id: deviceAuthDetails.accountId,
-        device_id: deviceAuthDetails.deviceId,
-        secret: deviceAuthDetails.secret,
-      };
+    return { success: true }; // successful login
+  }
 
-      fnToken = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${this.client.iosToken}`, exchangeData, { 'Content-Type': 'application/x-www-form-urlencoded' }, true);
-      if (fnToken.error) return fnToken;
-
-      if (this.client.deviceAuthOptions.deleteExisting) {
-        const deleteOthers = await this.deleteAllDeviceAuths([deviceAuthDetails.deviceId], fnToken);
-        if (deleteOthers.error) return deleteOthers;
-      }
-    } else {
-      const launcherToken = await this.getOAuthToken();
-      if (launcherToken.error) return launcherToken;
-
-      // Use the redirect to set the bearer token for launcher requests
-      this.client.requester.sendGet(false, 'https://www.epicgames.com/id/api/redirect',
-        null,
-        null,
-        { Referer: 'https://www.epicgames.com/id/login' });
-
-      const eula = await this.checkEULA(launcherToken);
-      if (eula.error) return eula;
-      if (!eula.accepted) {
-        const eulaAccept = await this.acceptEULA(launcherToken, eula);
-        if (!eulaAccept.accepted) return eulaAccept;
-      }
-
-      const exchange = await this.getOauthExchangeToken(launcherToken.access_token);
-      if (exchange.error) return exchange;
-
-      fnToken = await this.getFortniteOAuthToken(exchange);
-      if (fnToken.error) return fnToken;
+  /**
+   * Get login tokens by device auth
+   * @returns {object} JSON Object of result
+   */
+  async getTokenWithDeviceAuth() {
+    const auths = await this.readDeviceAuth();
+    if (auths[this.client.email]) {
+      const latest = auths[this.client.email][auths[this.client.email].length - 1];
+      this.deviceId = latest.deviceId;
+      this.deviceAccountId = latest.accountId;
+      this.deviceSecret = latest.secret;
     }
 
-    // Setup tokens from fnToken
-    this.setAuthData(fnToken);
+    if (!this.deviceId || !this.deviceAccountId || !this.deviceSecret) {
+      const create = await this.createDeviceAuth();
+      if (create.error) return create;
+    }
 
-    // Setup kill hook for the session token - to prevent login issues on restarts
+    const exchangeData = {
+      grant_type: 'device_auth',
+      account_id: this.deviceAccountId,
+      device_id: this.deviceId,
+      secret: this.deviceSecret,
+    };
+
+    const token = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
+      `basic ${this.client.iosToken}`, exchangeData, { 'Content-Type': 'application/x-www-form-urlencoded' }, true);
+    if (token.error) return token;
+
+    return token;
+  }
+
+  /**
+   * Get login tokens by regular user credentials
+   * @returns {object} JSON Object of result
+   */
+  async getTokenWithLoginCreds() {
+    const launcherToken = await this.getOAuthToken();
+    if (launcherToken.error) return launcherToken;
+
+    // TODO: Check that this works with a new account or else fix it
+    const eula = await this.checkEULA(launcherToken);
+    if (eula.error) return eula;
+    if (!eula.accepted) {
+      const eulaAccept = await this.acceptEULA(launcherToken, eula);
+      if (!eulaAccept.accepted) return eulaAccept;
+    }
+
+    const exchange = await this.getOAuthExchangeToken(launcherToken.access_token);
+    if (exchange.error) return exchange;
+
+    const token = await this.getFortniteOAuthToken(exchange);
+    return token;
+  }
+
+  /**
+   * Check if autokill shall be added and if it should
+   * attach the killhook which will kill the current logged in session
+   */
+  setupAutoKill() {
     if (this.client.autoKillSession && !this.killHook) {
       exitHook(async (callback) => {
         // eslint-disable-next-line no-console
@@ -78,49 +104,103 @@ module.exports = class Authenticator extends EventEmitter {
       });
       this.killHook = true;
     }
-
-    return { success: true }; // successful login
   }
 
   /**
-   * This generates a new DeviceAuth and sets it as `client.deviceAuthDetails`.
+   * Generate a new DeviceAuth and set it to the current session
    */
   async createDeviceAuth() {
-    const launcherToken = await this.getOAuthToken(undefined, undefined, true);
-    if (launcherToken.error) return { error: launcherToken.error };
+    const launcherToken = await this.getOAuthToken(false, '', true);
+    if (launcherToken.error) return { success: false, error: launcherToken.error };
 
-    const deviceAuthDetails = await this.client.requester.sendPost(false, `${Endpoints.DEVICE_AUTH}/${launcherToken.account_id}/deviceAuth`, `bearer ${launcherToken.access_token}`);
-    if (deviceAuthDetails.error) return { error: deviceAuthDetails.error };
+    const deviceAuthDetails = await this.client.requester.sendPost(false,
+      `${Endpoints.DEVICE_AUTH}/${launcherToken.account_id}/deviceAuth`, `bearer ${launcherToken.access_token}`);
+    if (deviceAuthDetails.error) return { success: false, error: deviceAuthDetails.error };
 
-    this.client.deviceAuthDetails = {
-      deviceId: deviceAuthDetails.deviceId,
-      accountId: deviceAuthDetails.accountId,
-      secret: deviceAuthDetails.secret,
-    };
+    this.deviceId = deviceAuthDetails.deviceId;
+    this.deviceAccountId = deviceAuthDetails.accountId;
+    this.deviceSecret = deviceAuthDetails.secret;
 
-    this.emit('device_auth_created', this.client.deviceAuthDetails);
+    const saved = await this.saveDeviceAuth();
+    if (!saved.success) return saved;
+
     return { success: true };
   }
 
   /**
-   * This deletes all deviceAuths.
-   * @param {*} token AccessToken. Leave empty.
-   * @param {*} dontDeleteIds Array of deviceIds you dont want to delete.
+   * Save the generate device auth to file
+   * @returns {object} JSON Object of result
    */
-  async deleteAllDeviceAuths(dontDeleteIds = [], accessToken) {
-    const token = accessToken || this.accessToken;
+  async saveDeviceAuth() {
+    if (!this.client.email) return { success: false, error: 'No email set to client.' };
+    if (!this.deviceId) return { success: false, error: 'No available device id set to authenticator.' };
+    if (!this.deviceAccountId) return { success: false, error: 'No device account id set to authenticator.' };
+    if (!this.deviceSecret) return { success: false, error: 'No device secret set to authenticator.' };
 
-    const existingDeviceAuths = await this.client.requester.sendGet(true, `${Endpoints.DEVICE_AUTH}/${token.account_id}/deviceAuth`, `bearer ${token.access_token}`);
-    if (existingDeviceAuths.error) return { error: existingDeviceAuths.error };
-
-    // eslint-disable-next-line consistent-return
-    existingDeviceAuths.forEach(async (deviceAuth) => {
-      if (!dontDeleteIds.includes(deviceAuth.deviceId)) {
-        const deletedAuth = await this.client.requester.sendDelete(false, `${Endpoints.DEVICE_AUTH}/${token.account_id}/deviceAuth/${deviceAuth.deviceId}`, `bearer ${token.access_token}`);
-        if (deletedAuth && deletedAuth.error) return { error: deletedAuth.error };
-      }
+    const data = await this.readDeviceAuth();
+    if (typeof data[this.client.email] === 'undefined') Object.assign(data, { [this.client.email]: [] });
+    data[this.client.email].push({
+      deviceId: this.deviceId,
+      accountId: this.deviceAccountId,
+      secret: this.deviceSecret,
     });
+
+    await fsp.writeFile(this.client.deviceAuthPath, JSON.stringify(data));
+
     return { success: true };
+  }
+
+  /**
+   * Read and return the saved device auths
+   * @returns {object} JSON Object of result
+   */
+  async readDeviceAuth() {
+    try {
+      const filedata = await fsp.readFile(this.client.deviceAuthPath);
+      const result = JSON.parse(filedata);
+      return result;
+    } catch (err) {
+      return {};
+    }
+  }
+
+  /**
+   * Read previous auths and delete the requested ones from file
+   */
+  async removeDeviceAuths(remove) {
+    const previous = await this.readDeviceAuth();
+    if (previous[this.client.email]) {
+      remove.forEach((key) => {
+        if (key.deviceId === this.deviceId) return;
+        previous[this.client.email] = previous[this.client.email]
+          .filter(p => p.deviceId === key.deviceId);
+      });
+    }
+  }
+
+  /**
+   * Revoke deviceAuths of logged in account except for the current session one
+   * @returns {object} JSON Object of result
+   */
+  async killDeviceAuths() {
+    const existingDeviceAuths = await this.client.requester.sendGet(true,
+      `${Endpoints.DEVICE_AUTH}/${this.accountId}/deviceAuth`, `bearer ${this.accessToken}`);
+    if (existingDeviceAuths.error) return { success: false, error: existingDeviceAuths.error };
+
+    const errors = [];
+    existingDeviceAuths.forEach(async (key) => {
+      if (key.deviceId === this.deviceId) return false;
+      const deletedAuth = await this.client.requester.sendDelete(false,
+        `${Endpoints.DEVICE_AUTH}/${this.accountId}/deviceAuth/${key.deviceId}`, `bearer ${this.accessToken}`);
+      // something failed, add it to an error array for the user to see
+      if (deletedAuth && deletedAuth.error) errors.push(deletedAuth.error);
+      return !(deletedAuth && deletedAuth.error);
+    });
+
+    await this.removeDeviceAuths(existingDeviceAuths);
+
+    // erorrs are for in-case someone are interested of errors that was made by manual call
+    return { success: true, errors };
   }
 
   /**
@@ -128,16 +208,16 @@ module.exports = class Authenticator extends EventEmitter {
    * @param {string} token access_token from login data
    * @returns {object} JSON Object of result
    */
-  async getOauthExchangeToken(token) {
+  async getOAuthExchangeToken(token) {
     const res = await this.client.requester.sendGet(false, Endpoints.OAUTH_EXCHANGE, `bearer ${token}`);
 
     if (res.error || res.code) return res;
-    return { error: `[getOauthExchangeToken] Unknown response from gateway ${Endpoints.OAUTH_EXCHANGE}` };
+    return { error: `[getOAuthExchangeToken] Unknown response from gateway ${Endpoints.OAUTH_EXCHANGE}` };
   }
 
   /**
    * Get OAuth Token for Fortnite Game access
-   * @param {string} exchange Token from getOauthExchangeToken()
+   * @param {string} exchange Token from getOAuthExchangeToken()
    * @returns {object} JSON Object of result
    */
   async getFortniteOAuthToken(exchange) {
@@ -159,8 +239,12 @@ module.exports = class Authenticator extends EventEmitter {
    * @returns {object} JSON Object of result
    */
   async getOAuthToken(twoStep = false, method, useIosToken = false) {
-    await this.client.requester.sendGet(false, Endpoints.CSRF_TOKEN,
-      undefined, undefined, undefined, false);
+    const rep = await this.client.requester.sendGet(false, Endpoints.API_REPUTATION);
+    if (!rep || (rep && rep.verdict !== 'allow')) {
+      return { error: `[getOAuthToken] Cannot proceed login because CAPTCHA rate limit: ${rep.verdict}` };
+    }
+
+    await this.client.requester.sendGet(false, Endpoints.CSRF_TOKEN);
     this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
 
     if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
@@ -207,7 +291,9 @@ module.exports = class Authenticator extends EventEmitter {
       token_type: 'eg1',
     };
 
-    const res = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN, `basic ${useIosToken ? this.client.iosToken : this.client.launcherToken}`, exchangeData, headers, true);
+    const res = await this.client.requester.sendPost(false, Endpoints.OAUTH_TOKEN,
+      `basic ${useIosToken ? this.client.iosToken : this.client.launcherToken}`,
+      exchangeData, headers, true);
 
     if (res.error || res.access_token) return res;
     return { error: `[getOAuthToken] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
@@ -281,7 +367,9 @@ module.exports = class Authenticator extends EventEmitter {
   async killCurrentSession() {
     if (!this.accessToken) return { error: 'Cannot kill the session due to no accessToken set.' };
 
-    const res = await this.client.requester.sendDelete(true, `${Endpoints.OAUTH_KILL_SESSION}/${this.accessToken}`, `bearer ${this.accessToken}`, {}, undefined, true);
+    const res = await this.client.requester.sendDelete(true, `${Endpoints.OAUTH_KILL_SESSION}/${this.accessToken}`,
+      `bearer ${this.accessToken}`, {}, undefined, true);
+
     if (!res) return { success: '[fortnite-basic-api] Client session has been killed.' };
     if (res.error) return res;
     return { error: `[killCurrentSession] Unknown response from gateway ${Endpoints.OAUTH_TOKEN}` };
@@ -289,6 +377,7 @@ module.exports = class Authenticator extends EventEmitter {
 
   /**
    * Set auth data from login() or updateToken() input
+   * Emits the update to 'auths_updated' event
    */
   setAuthData(data) {
     this.expiresAt = data.expires_at;
@@ -309,6 +398,7 @@ module.exports = class Authenticator extends EventEmitter {
     this.entitlements = await this.client.requester.sendGet(false,
       `${Endpoints.ENTITLEMENTS}/${login.account_id}/entitlements?start=0&count=5000`,
       `bearer ${login.access_token}`);
+
     const owngame = this.entitlements.find(s => s.entitlementName === 'Fortnite_Free');
     if (!owngame) {
       const success = await this.purchaseFortnite(login);
@@ -358,13 +448,16 @@ module.exports = class Authenticator extends EventEmitter {
       `${Endpoints.ORDER_PURCHASE}/${login.account_id}/orders/quickPurchase`,
       `bearer ${login.access_token}`,
       offer);
+    console.log(prepare); // TODO : for debug purpose
 
     if (prepare.quickPurchaseStatus !== 'CHECKOUT') return false; // something went wrong.
 
     const purchase = await this.client.requester.sendGet(false,
       `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}`);
+    console.log(purchase); // TODO : for debug purpose
 
     const token = purchase.match(/<input(?:.*?)id=\"purchaseToken\"(?:.*)value=\"([^"]+).*>/)[1];
+    console.log(token); // TODO : for debug purpose
 
     return token && prepare.quickPurchaseStatus ? prepare.quickPurchaseStatus === 'CHECKOUT' : false;
   }

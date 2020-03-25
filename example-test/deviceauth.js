@@ -10,9 +10,13 @@ const { Client, Communicator, FriendStatus } = require('../index.js'); // this s
 const client = new Client({
   email: process.env.FORTNITE_EMAIL, // PLEASE USE ENV VARIABLES!
   password: process.env.FORTNITE_PASSWORD, // PLEASE USE ENV VARIABLES!
+  useDeviceAuth: true,
+  removeOldDeviceAuths: true,
+  // deviceAuthPath: './path.../file.json'; // Default is './fbadeviceauths.json'; ()
   // You should not have to update any of the tokens.
   launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
   fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',
+  // iosToken: 'token' // this does not have to be changed unless something changes
   autokill: true,
 });
 
