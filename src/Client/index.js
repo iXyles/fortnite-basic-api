@@ -9,16 +9,18 @@ module.exports = class Client {
   constructor(args = {}) {
     this.email = args.email || undefined;
     this.password = args.password || undefined;
-    this.deviceAuth = args.deviceAuth || undefined;
-    this.createNewDeviceAuth = args.createNewDeviceAuth || false,
-    this.deleteOtherDeviceAuths = args.deleteOtherDeviceAuths || false;
-    this.exchangeCode = args.exchangeCode || undefined;
+    this.deviceAuthDetails = args.deviceAuthDetails || undefined;
+    this.deviceAuthOptions = {
+      createNew: false,
+      deleteExisting: false,
+      ...args.deviceAuthOptions,
+    };
     this.launcherToken = args.launcherToken || 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=';
     this.fortniteToken = args.fortniteToken || 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=';
-    this.iosToken = args.iosToken || 'MzQ0NmNkNzI2OTRjNGE0NDg1ZDgxYjc3YWRiYjIxNDE6OTIwOWQ0YTVlMjVhNDU3ZmI5YjA3NDg5ZDMxM2I0MWE='
+    this.iosToken = args.iosToken || 'MzQ0NmNkNzI2OTRjNGE0NDg1ZDgxYjc3YWRiYjIxNDE6OTIwOWQ0YTVlMjVhNDU3ZmI5YjA3NDg5ZDMxM2I0MWE=';
     this.seasonStartTime = args.seasonStartTime || '1570990000'; // S11 EPOCH
-    if ((!this.email || !this.password) && !this.deviceAuth && !this.exchangeCode) {
-      throw new Error('Constructor data was incorrect: No auth method found. Please provide email and password, exchangecode or deviceauth data!');
+    if (!this.email || !this.password || !this.launcherToken || !this.fortniteToken) {
+      throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken] check docs.');
     }
     this.autoKillSession = args.autokill !== undefined ? args.autokill : true;
 
