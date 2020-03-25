@@ -14,22 +14,29 @@ Inspired by other repos about Fortnite API's as:
 Which I previously used fortnite-api but have gotten issues with unhandledrejections which causing issues in other projects. Therefore I rebuilt with focus on Async/await to resolve the issues and adding support for V2 API endpoint.
 
 # BREAKING CHANGES
-V1.3.0 Changed location of where you find "lookup, stats, authenticator" data, check index.js in Client to see more regarding it.
-V1.3.2 Change the launcher token to the given on in the example below or else it will not work.
+From v1.5 backward compatibility methods & ways of doing things has been removed. Check the examples how to use it properly.
+
+- Generate device id from exchange example: https://github.com/iXyles/fortnite-basic-api/blob/master/example-test/generatedeviceauth.js 
+- Login with regular creds and use device auth example: https://github.com/iXyles/fortnite-basic-api/blob/master/example-test/deviceauth.js 
 
 Example usage: 
 ```js
 const { Client, Communicator, FriendStatus } = require('fortnite-basic-api');
 
-// Creation of the Client, autokill will kill the session when client is disposed. 
+// Creation of the Client, autokill will kill the session when client is disposed.
 // If you are not giving any tokens it will use the default ones that are needed.
+// If you got rate limited (captcha_invalid) you can use an exchangeCode to generate a deviceauth.
+// You get the exchangeCode at https://www.epicgames.com/id/login?redirectUrl=https%3A%2F%2Fwww.epicgames.com%2Fid%2Fapi%2Fexchange.
+// Remember that you must be logged in with the account you want at https://epicgames.com
+// AND BE CAREFUL! The generated code bypasses all 2FA logins & credentials, so do not share it.
 const client = new Client({
-  email: '',
-  password: '',
+  email: process.env.FORTNITE_EMAIL, // PLEASE USE ENV VARIABLES!
+  password: process.env.FORTNITE_PASSWORD, // PLEASE USE ENV VARIABLES!
+  // You should not have to update any of the tokens.
   launcherToken: 'MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y=',
   fortniteToken: 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=',
   autokill: true,
-}); 
+});
 
 // Creation of communicator
 const communicator = new Communicator(client);
@@ -37,8 +44,7 @@ const communicator = new Communicator(client);
 // Example of usage
 (async () => {
   // Perform the login process of the "client"
-
-  console.log(await client.login());
+  console.log(await client.authenticator.login());
 
   // Setup communicator events
   communicator.events.on('session:started', async () => {
@@ -91,10 +97,6 @@ const communicator = new Communicator(client);
 
   // Since everything is async based, we can query everything parallel how ever we want with await
   const parallel = await Promise.all([
-    // Supports both name & id
-    client.stats.getV1Stats('iXyles'),
-    client.stats.getV1Stats('96afefcb12e14e7fa1bcfab1189eae55'),
-
     // Supports both name & id
     client.stats.getV2Stats('iXyles'),
     client.stats.getV2Stats('96afefcb12e14e7fa1bcfab1189eae55'),
