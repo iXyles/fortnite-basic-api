@@ -9,7 +9,7 @@ const Endpoints = require('../resources/Endpoints');
  * @param {string} value The parameter to validate
  * @returns {boolean} `true | false`
  */
-module.exports.isDisplayName = value => value && typeof value === 'string' && value.length >= 3 && value.length <= 16;
+module.exports.isDisplayName = (value) => value && typeof value === 'string' && value.length >= 3 && value.length <= 16;
 
 /**
  * Make a promt request to console, and wait for repsonse before resolving it
@@ -20,7 +20,7 @@ module.exports.consolePrompt = (query) => {
     output: process.stdout,
   });
 
-  return new Promise(resolve => rl.question(query, (ans) => {
+  return new Promise((resolve) => rl.question(query, (ans) => {
     rl.close();
     resolve(ans);
   }));
@@ -29,7 +29,7 @@ module.exports.consolePrompt = (query) => {
 /**
  * Convert a users accountId to a JID which we can use for communicator
  */
-module.exports.makeJID = accountId => new JID(`${accountId}@${Endpoints.EPIC_PROD_ENV}`);
+module.exports.makeJID = (accountId) => new JID(`${accountId}@${Endpoints.EPIC_PROD_ENV}`);
 
 /**
  * Generate a UUID

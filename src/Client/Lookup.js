@@ -79,7 +79,7 @@ module.exports = class Lookup {
 
     const parallel = await Promise.all(requests);
     let accounts = [];
-    Object.keys(parallel).forEach(result => accounts.push(parallel[result]));
+    Object.keys(parallel).forEach((result) => accounts.push(parallel[result]));
     accounts = accounts.flat(1);
 
     if (accounts.error) return accounts;

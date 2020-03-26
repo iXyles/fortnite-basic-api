@@ -96,6 +96,8 @@ module.exports = class CommunicatorEvents extends EventEmitter {
       this.emit('friend:presence', friend);
       this.emit(`friend#${friend.accountId}:presence`, friend);
     } catch (ex) {
+      // This should never happen and as of why it is an console.error
+      // eslint-disable-next-line no-console
       console.error('[REPORT PLEASE] [fortnite-basic-api] [Communicator]', ex);
     }
   }
@@ -121,6 +123,8 @@ module.exports = class CommunicatorEvents extends EventEmitter {
         default: this.emit('unknowndatamessage', `None implemented data stream of type: ${body.type}`, body);
       }
     } catch (ex) {
+      // This should never happen and as of why it is an console.error
+      // eslint-disable-next-line no-console
       console.error('[REPORT PLEASE] [fortnite-basic-api] [Communicator]', ex);
     }
   }

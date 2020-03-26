@@ -17,8 +17,8 @@ module.exports = class Client {
     this.fortniteToken = args.fortniteToken || 'ZWM2ODRiOGM2ODdmNDc5ZmFkZWEzY2IyYWQ4M2Y1YzY6ZTFmMzFjMjExZjI4NDEzMTg2MjYyZDM3YTEzZmM4NGQ=';
     this.iosToken = args.iosToken || 'MzQ0NmNkNzI2OTRjNGE0NDg1ZDgxYjc3YWRiYjIxNDE6OTIwOWQ0YTVlMjVhNDU3ZmI5YjA3NDg5ZDMxM2I0MWE=';
     this.seasonStartTime = args.seasonStartTime || '1582185600'; // S12 (Chapter 2 Season 2) EPOCH
-    if (!this.email || (!this.password && !this.useDeviceAuth) || 
-        !this.launcherToken || !this.fortniteToken || !this.iosToken) {
+    if (!this.email || (!this.password && !this.useDeviceAuth)
+      || !this.launcherToken || !this.fortniteToken || !this.iosToken) {
       throw new Error('Constructor data was incorrect [email, password, launcherToken, fortniteToken, iosToken] check docs.');
     }
     this.autoKillSession = args.autokill !== undefined ? args.autokill : true;
@@ -36,7 +36,7 @@ module.exports = class Client {
   async createDeviceAuthFromExchangeCode() {
     const code = await Utils.consolePrompt('To generate device auth, please provide an exchange code: ');
     await this.requester.sendGet(false, Endpoints.CSRF_TOKEN);
-    const xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
+    const xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find((x) => x.key === 'XSRF-TOKEN');
     if (!xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
 
     const headers = {

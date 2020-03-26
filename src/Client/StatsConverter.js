@@ -138,6 +138,6 @@ module.exports = class Converter {
    */
   static winrate(a, b) {
     if (Number.parseInt(b, 10) === 0) return 0;
-    return (Number.parseInt(a, 10) / Number.parseInt(b, 10) * 100).toFixed(2);
+    return ((Number.parseInt(a, 10) / Number.parseInt(b, 10)) * 100).toFixed(2);
   }
 };

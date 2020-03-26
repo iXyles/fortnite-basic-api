@@ -180,7 +180,7 @@ module.exports = class Authenticator extends EventEmitter {
       remove.forEach((key) => {
         if (key.deviceId === this.deviceId) return;
         previous[this.client.email] = previous[this.client.email]
-          .filter(p => p.deviceId === key.deviceId);
+          .filter((p) => p.deviceId === key.deviceId);
       });
     }
   }
@@ -247,12 +247,12 @@ module.exports = class Authenticator extends EventEmitter {
    */
   async getOAuthToken(twoStep = false, method, useIosToken = false) {
     const rep = await this.client.requester.sendGet(false, Endpoints.API_REPUTATION);
-    if (!rep || (rep && rep.verdict !== 'allow')) {
+    if (!rep || (rep && rep.verdict && rep.verdict !== 'allow')) {
       return { error: `[getOAuthToken] Cannot proceed login because CAPTCHA rate limit: ${rep.verdict}` };
     }
 
     await this.client.requester.sendGet(false, Endpoints.CSRF_TOKEN);
-    this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find(x => x.key === 'XSRF-TOKEN');
+    this.xsrf = this.client.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find((x) => x.key === 'XSRF-TOKEN');
 
     if (!this.xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
 
@@ -352,7 +352,7 @@ module.exports = class Authenticator extends EventEmitter {
       this.emit('token_refresh', refresh);
     } else {
       try {
-        refresh = await Utils.resolveEvent(this, 'token_refresh', 5000, s => s);
+        refresh = await Utils.resolveEvent(this, 'token_refresh', 5000, (s) => s);
       } catch (err) { // should only happen in race condition
         if (this.accessToken) refresh = await this.checkToken();
         else refresh = { error: 'Token refresh failed, error unknown because of missed event fire' };
@@ -406,7 +406,7 @@ module.exports = class Authenticator extends EventEmitter {
       `${Endpoints.ENTITLEMENTS}/${login.account_id}/entitlements?start=0&count=5000`,
       `bearer ${login.access_token}`);
 
-    const owngame = this.entitlements.find(s => s.entitlementName === 'Fortnite_Free');
+    const owngame = this.entitlements.find((s) => s.entitlementName === 'Fortnite_Free');
     if (!owngame) {
       return { accepted: false, error: 'You must purchase the game manually by logging in on the account.' };
     }
@@ -461,6 +461,8 @@ module.exports = class Authenticator extends EventEmitter {
     const purchase = await this.client.requester.sendGet(false,
       `${Endpoints.CAPTCHA_PURCHASE}?namespace=${offer.lineOffers[0].namespace}&offers=${offer.lineOffers[0].offerId}#/purchase/verify?_k=jk77oe`);
 
+    // eslint is lying regarding this row, but this does not work anyhow
+    // eslint-disable-next-line no-useless-escape
     const token = purchase.match(/<input(?:.*?)id=\"purchaseToken\"(?:.*)value=\"([^"]+).*>/)[1];
 
     return token && prepare.quickPurchaseStatus ? prepare.quickPurchaseStatus === 'CHECKOUT' : false;

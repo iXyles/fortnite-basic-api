@@ -43,7 +43,7 @@ module.exports = class Friend {
     await this.communicator.sendProbe(this.accountId);
     try {
       const result = await Utils.resolveEvent(this.communicator.events,
-        `friend#${this.accountId}:presence`, 5000, s => s);
+        `friend#${this.accountId}:presence`, 5000, (s) => s);
 
       this.status = result.status;
       this.presence = result.presence;

@@ -21,8 +21,7 @@ module.exports = class Friendship {
 
     const result = await this.client.requester.sendPost(true,
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
-      `bearer ${this.client.authenticator.accessToken}`,
-    );
+      `bearer ${this.client.authenticator.accessToken}`);
 
     return result === undefined;
   }
@@ -37,8 +36,7 @@ module.exports = class Friendship {
 
     const result = await this.client.requester.sendDelete(true,
       `${Endpoints.FRIENDS}/${this.client.authenticator.accountId}/${id}`,
-      `bearer ${this.client.authenticator.accessToken}`,
-    );
+      `bearer ${this.client.authenticator.accessToken}`);
 
     return result === undefined;
   }
@@ -72,7 +70,7 @@ module.exports = class Friendship {
 
       if (result.error) return [];
 
-      let friends = (Array.isArray(result) ? result : []).map(account => ({
+      let friends = (Array.isArray(result) ? result : []).map((account) => ({
         accountId: account.accountId,
         friendStatus: account.status === FriendStatus.ACCEPTED
           ? FriendStatus.ACCEPTED
@@ -82,7 +80,7 @@ module.exports = class Friendship {
         created: new Date(account.created),
         favorite: account.favorite,
       }));
-      const ids = friends.map(friend => friend.accountId);
+      const ids = friends.map((friend) => friend.accountId);
       if (ids.length === 0) return [];
       const profiles = {};
       (await this.client.lookup.accountLookup(ids)).forEach((profile) => {
@@ -95,10 +93,12 @@ module.exports = class Friendship {
       friends = friends.map((friend) => {
         if (profiles[friend.accountId]) return Object.assign(friend, profiles[friend.accountId]);
         return null;
-      }).filter(friend => friend); // filter removes null values from array of friends.
+      }).filter((friend) => friend); // filter removes null values from array of friends.
 
       return friends;
     } catch (err) {
+      // This should never happen and as of why it is an console.error
+      // eslint-disable-next-line no-console
       console.error('[REPORT PLEASE] [fortnite-basic-api] [Friendship]', err);
     }
 
@@ -111,9 +111,9 @@ module.exports = class Friendship {
    */
   async getIncomingFriendRequests() {
     const raw = await this.getRawFriends(true);
-    const friends = raw.map(friend => new Friend(this.communicator, friend));
+    const friends = raw.map((friend) => new Friend(this.communicator, friend));
 
-    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.INCOMING) : [];
+    return friends ? friends.filter((friend) => friend.friendStatus === FriendStatus.INCOMING) : [];
   }
 
   /**
@@ -122,9 +122,9 @@ module.exports = class Friendship {
    */
   async getOutgoingFriendRequests() {
     const raw = await this.getRawFriends(true);
-    const friends = raw.map(friend => new Friend(this.communicator, friend));
+    const friends = raw.map((friend) => new Friend(this.communicator, friend));
 
-    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.OUTGOING) : [];
+    return friends ? friends.filter((friend) => friend.friendStatus === FriendStatus.OUTGOING) : [];
   }
 
   /**
@@ -133,8 +133,8 @@ module.exports = class Friendship {
    */
   async getFriends() {
     const raw = await this.getRawFriends(false);
-    const friends = raw.map(friend => new Friend(this.communicator, friend));
+    const friends = raw.map((friend) => new Friend(this.communicator, friend));
 
-    return friends ? friends.filter(friend => friend.friendStatus === FriendStatus.ACCEPTED) : [];
+    return friends ? friends.filter((friend) => friend.friendStatus === FriendStatus.ACCEPTED) : [];
   }
 };
