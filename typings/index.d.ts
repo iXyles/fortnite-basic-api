@@ -106,28 +106,17 @@ declare module 'fortnite-basic-api' {
     error: string;
   }
 
-  export interface Friend {
-    communicator: Communicator;
-    accountId: string;
-    JID: string;
-    friendStatus: FriendStatus;
-    status: string;
-    presence: string;
-    created: any;
-    favorite: boolean;
-
-    fetch(): void;
-    update(data: any): void;
-    getStatus(type?: any): string;
-    remove(): boolean;
-    accept(): boolean;
-    reject(): boolean;
-    sendMessage(message: string): boolean;
+  export interface LookupResult {
+    id: string;
+    accountName: string;
+    externalAuths: ExternalAuths;
+    error: string;
   }
 
   export interface OperationResult {
     success: boolean | string;
-    error: any;
+    error: boolean | string | any;
+    errors: any[];
   }
 
   export interface ClientConfig {
@@ -154,6 +143,12 @@ declare module 'fortnite-basic-api' {
     refresh_token?: string;
     account_id?: string;
     perms?: string;
+    error: string;
+  }
+
+  export interface TokenResult {
+    tokenValid: boolean;
+    error: string;
   }
 
   export class Authenticator {
@@ -162,27 +157,33 @@ declare module 'fortnite-basic-api' {
     client: Client;
     killHook: boolean;
     refreshing: boolean;
+    expiresAt: string;
+    accessToken: string;
+    refreshToken: string;
+    accountId: string;
+    perms: string;
+
   
-    login(): OperationResult;
-    getTokenWithDeviceAuth(): any;
-    getTokenWithLoginCreds(): any;
+    login(): Promise<OperationResult>;
+    getTokenWithDeviceAuth(): Promise<any>;
+    getTokenWithLoginCreds(): Promise<any>;
     setupAutoKill(): void;
-    createSessionDeviceAuth(): any;
-    createDeviceAuthWithExchange(token: string): OperationResult;
-    saveDeviceAuth(): OperationResult;
-    readDeviceAuth(): any;
+    createSessionDeviceAuth(): Promise<OperationResult>;
+    createDeviceAuthWithExchange(token: string): Promise<OperationResult>;
+    saveDeviceAuth(): Promise<OperationResult>;
+    readDeviceAuth(): Promise<any>;
     removeDeviceAuths(): void;
-    killDeviceAuths(): OperationResult;
-    getOAuthExchangeToken(token: string): any;
-    getFortniteOAuthToken(exchangeToken: string): any;
-    getOAuthToken(twoStep: boolean, method: any, useIosToken: boolean);
-    checkToken(): any;
-    updateToken(): OperationResult;
-    killCurrentSession(): OperationResult;
+    killDeviceAuths(): Promise<OperationResult>;
+    getOAuthExchangeToken(token: string): Promise<any>;
+    getFortniteOAuthToken(exchangeToken: string): Promise<AuthData>;
+    getOAuthToken(twoStep?: boolean, method?: any, useIosToken?: boolean): Promise<any>;
+    checkToken(): Promise<TokenResult>;
+    updateToken(): Promise<OperationResult>;
+    killCurrentSession(): Promise<OperationResult>;
     setAuthData(data: AuthData): void;
-    checkEULA(data: AuthData): any;
-    acceptEULA(login: AuthData, eula: any): any;
-    purchaseFortnite(login: AuthData): boolean;
+    checkEULA(data: AuthData): Promise<any>;
+    acceptEULA(login: AuthData, eula: any): Promise<any>;
+    purchaseFortnite(login: AuthData): Promise<boolean>;
   }
 
   export class Stats {
@@ -190,7 +191,7 @@ declare module 'fortnite-basic-api' {
 
     client: Client;
 
-    getV2Stats(user: string | any): StatsModel;
+    getV2Stats(user: string | LookupResult): Promise<StatsModel>;
   }
 
   export class Presence {
@@ -199,18 +200,30 @@ declare module 'fortnite-basic-api' {
     communicator: Communicator;
   }
 
+  export class Lookup {
+    constructor(client: Client);
+
+    client: Client;
+
+    accountLookup(account: string | string[] | LookupResult): Promise<LookupResult | LookupResult[]>;
+    lookupByUsername(username: string): Promise<LookupResult>;
+    lookupByUserId(accountId: string): Promise<LookupResult>;
+    lookupByUserIds(accountIds: string[]): Promise<LookupResult[] | LookupResult>;
+  }
+
   export class Client {
     constructor(config: ClientConfig);
 
     authenticator: Authenticator;
+    lookup: Lookup;
     stats: Stats;
 
-    createDeviceAuthFromExchangeCode(): OperationResult;
-    getServerStatus(): boolean;
-    getBRNews(language: string): any;
-    getBRStore(): any;
-    getPVEInfo(): any;
-    getBREventFlags(): any;
+    createDeviceAuthFromExchangeCode(): Promise<OperationResult>;
+    getServerStatus(): Promise<boolean>;
+    getBRNews(language: string): Promise<any>;
+    getBRStore(): Promise<any>;
+    getPVEInfo(): Promise<any>;
+    getBREventFlags(): Promise<any>;
   }
 
   export class Friendship {
@@ -219,13 +232,34 @@ declare module 'fortnite-basic-api' {
     communicator: Communicator;
     client:  Client;
 
-    addFriend(user: string): boolean;
-    removeFriend(user: string): boolean;
-    sendMessage(to: any, message: string): boolean;
-    getRawFriends(includePending: boolean): Friend[];
-    getIncomingFriendRequests(): Friend[];
-    getOutgoingFriendRequests(): Friend[];
-    getFriends(): Friend[];
+    addFriend(user: string): Promise<boolean>;
+    removeFriend(user: string): Promise<boolean>;
+    sendMessage(to: any, message: string): Promise<boolean>;
+    getRawFriends(includePending: boolean): Promise<Friend[]>;
+    getIncomingFriendRequests(): Promise<Friend[]>;
+    getOutgoingFriendRequests(): Promise<Friend[]>;
+    getFriends(): Promise<Friend[]>;
+  }
+
+  export class Friend {
+    constructor(communicator: Communicator, data?: any);
+
+    communicator: Communicator;
+    accountId: string;
+    JID: string;
+    friendStatus: FriendStatus;
+    status: Status;
+    presence: string;
+    created: any;
+    favorite: boolean;
+
+    fetch(): void;
+    update(data: any): void;
+    getStatus(type?: string): Promise<string>;
+    remove(): Promise<boolean>;
+    accept(): Promise<boolean>;
+    reject(): Promise<boolean>;
+    sendMessage(message: string): Promise<boolean>;
   }
 
   export class Communicator {
@@ -240,12 +274,13 @@ declare module 'fortnite-basic-api' {
     resource: string;
     reconnect: boolean;
     title: string;
+    stream: any;
 
     setup(): void;
     updateConfigs(opts: any): void;
-    connect(): OperationResult;
-    sendProbe(to: any): void;
-    updateStatus(status: any): void;
+    connect(): Promise<OperationResult>;
+    sendProbe(to: any): Promise<any>;
+    updateStatus(status: any): Promise<any>;
     performRefreshLogin(): void;
   }
 }

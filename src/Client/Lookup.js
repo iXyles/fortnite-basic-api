@@ -80,7 +80,12 @@ module.exports = class Lookup {
     const parallel = await Promise.all(requests);
     let accounts = [];
     Object.keys(parallel).forEach((result) => accounts.push(parallel[result]));
-    accounts = accounts.flat(1);
+
+    if (Array.prototype.flat) {
+      accounts = accounts.flat(1);
+    } else {
+      accounts = Utils.flat(accounts);
+    }
 
     if (accounts.error) return accounts;
     if (accounts.length === 0) return { error: 'No usernames with the ids could be found.' };
