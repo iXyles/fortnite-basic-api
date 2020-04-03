@@ -11,7 +11,7 @@ module.exports = class Lookup {
    * @param {string|object|array} user JSON of an already lookedup account,
    * username of the account or the userId
    * array of usernames or ids
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
+   * @returns {object} JSON Object of the result `id, displayName, externalAuths` OR `error`
    */
   async accountLookup(account) {
     if (account.error) return account;
@@ -24,7 +24,7 @@ module.exports = class Lookup {
   /**
    * Gets a users userId and performs "lookupByUserId()"
    * @param {string} username Name of the user to lookup
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
+   * @returns {object} JSON Object of the result `id, displayName, externalAuths` OR `error`
    */
   async lookupByUsername(username) {
     const check = await this.client.authenticator.checkToken();
@@ -40,7 +40,7 @@ module.exports = class Lookup {
   /**
    * Lookup a user by userId
    * @param {string} accountId Id of the account to lookup
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
+   * @returns {object} JSON Object of the result `id, displayName, externalAuths` OR `error`
    */
   async lookupByUserId(accountId) {
     const check = await this.client.authenticator.checkToken();
@@ -56,7 +56,7 @@ module.exports = class Lookup {
   /**
    * Lookup a user by userIds
    * @param {array} accountIds of accounts to look up
-   * @returns {object} JSON Object of the result `id, accountName, externalAuths` OR `error`
+   * @returns {object} JSON Object of the result `id, displayName, externalAuths` OR `error`
    */
   async lookupByUserIds(accountIds) {
     const check = await this.client.authenticator.checkToken();
