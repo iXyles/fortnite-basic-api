@@ -15,7 +15,6 @@ module.exports = class Friend {
     this.platform = data.platform || ''
   }
 
-
   /**
    * Fetch data about user and update Friend
    */
