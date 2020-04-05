@@ -75,3 +75,14 @@ module.exports.stringSplit = (str, separator, limit) => {
 
   return str;
 };
+
+/**
+ * Custom implementation of Array.prototype.flat as Node doesn't support it
+ * @param {array} array The array to flat
+ * @param {depth} depth Depth of array, default value is 1
+ */
+module.exports.flat = (array, depth = 1) => {
+  return array.reduce((flat, toFlatten) => {
+    return flat.concat((Array.isArray(toFlatten) && (depth > 1)) ? toFlatten.flat(depth - 1) : toFlatten);
+  }, []);
+}
