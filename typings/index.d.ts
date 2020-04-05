@@ -86,12 +86,6 @@ declare module 'fortnite-basic-api' {
     nintendo: AuthPlatform;
   }
 
-  export interface User {
-    id: string;
-    displayName: string;
-    externalAuths: ExternalAuths;
-  }
-
   export interface FortniteInputMethod {
     gamepad: FortniteMode;
     touch: FortniteMode;
@@ -102,13 +96,13 @@ declare module 'fortnite-basic-api' {
   export interface StatsModel {
     lifetime: FortniteInputMethod;
     season: FortniteInputMethod;
-    user: User;
+    user: LookupResult;
     error: string;
   }
 
   export interface LookupResult {
     id: string;
-    accountName: string;
+    displayName: string;
     externalAuths: ExternalAuths;
     error: string;
   }
