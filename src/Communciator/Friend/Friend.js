@@ -12,6 +12,7 @@ module.exports = class Friend {
     this.presence = data.presence;
     this.created = data.created || undefined; // Unknown, unless query via friendship
     this.favorite = typeof data.favorite === 'boolean' ? data.favorite : undefined; // Unknown, unless query via friendship
+    this.platform = data.platform || ''
   }
 
   /**

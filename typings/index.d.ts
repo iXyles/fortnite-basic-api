@@ -252,6 +252,7 @@ declare module 'fortnite-basic-api' {
     presence: string;
     created: any;
     favorite: boolean;
+    platform: string;
 
     fetch(): void;
     update(data: any): void;
