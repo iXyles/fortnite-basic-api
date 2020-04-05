@@ -241,6 +241,7 @@ declare module 'fortnite-basic-api' {
     getFriends(): Promise<Friend[]>;
   }
 
+ 
   export class Friend {
     constructor(communicator: Communicator, data?: any);
 
