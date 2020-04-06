@@ -80,16 +80,8 @@ module.exports = class CommunicatorEvents extends EventEmitter {
       if (data.from.startsWith(this.communicator.client.authenticator.accountId)) return;
       if (data.type === 'unavailable' && !data.delay) return; // should mean it was a failed presence (removed friend)
 
-      let platform = ''
       const fromSplit = data.from.split('Fortnite:');
-
-      if (fromSplit && fromSplit.length > 1) {
-        const platformSrc = fromSplit[1];
-
-        if (platformSrc.length > 2) {
-          platform = platformSrc.substr(0, 3);
-        }
-      }
+      const platform = Array.isArray(fromSplit) && fromSplit[1] ? fromSplit[1].substr(0, 3) : '';
 
       const friend = new Friend(this.communicator, {
         accountId: data.from.split('@')[0],
