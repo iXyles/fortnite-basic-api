@@ -27,8 +27,9 @@ const client = new Client({
   // In the JSON file on disk
 
   // This is where the magic happen
+  // If you don't pass your exchange code as an argument client.createDeviceAuthFromExchangeCode(), you will be prompted in the command line after starting the project to enter your exchange code
   console.log('Success creation of device auth',
-    await client.createDeviceAuthFromExchangeCode());
+    await client.createDeviceAuthFromExchangeCode(process.env.EXCHANGE_CODE));
 
   // Perform the login process of the "client"
   console.log('Success login with created device auth',

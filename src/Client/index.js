@@ -33,8 +33,8 @@ module.exports = class Client {
    * Creates and saves a device auth
    * Must perform login afterwards
    */
-  async createDeviceAuthFromExchangeCode() {
-    const code = await Utils.consolePrompt('To generate device auth, please provide an exchange code: ');
+  async createDeviceAuthFromExchangeCode(exchangeCode) {
+    const code = exchangeCode || await Utils.consolePrompt('To generate device auth, please provide an exchange code: ');
     await this.requester.sendGet(false, Endpoints.CSRF_TOKEN);
     const xsrf = this.requester.jar.getCookies(Endpoints.CSRF_TOKEN).find((x) => x.key === 'XSRF-TOKEN');
     if (!xsrf) return { error: 'Failed querying CSRF endpoint with a valid response of XSRF-TOKEN' };
