@@ -234,7 +234,7 @@ declare module 'fortnite-basic-api' {
     getOutgoingFriendRequests(): Promise<Friend[]>;
     getFriends(): Promise<Friend[]>;
   }
-
+ 
   export class Friend {
     constructor(communicator: Communicator, data?: any);
 
@@ -246,6 +246,7 @@ declare module 'fortnite-basic-api' {
     presence: string;
     created: any;
     favorite: boolean;
+    platform: string;
 
     fetch(): void;
     update(data: any): void;
