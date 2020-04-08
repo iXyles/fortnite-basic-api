@@ -1,6 +1,6 @@
 {
   "name": "fortnite-basic-api",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "basic fortnite api and other things, supporting both v1 and v2, using request-promises, xmpp support",
   "main": "index.js",
   "types": "typings/index.d.ts",
