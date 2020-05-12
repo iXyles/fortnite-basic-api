@@ -49,9 +49,9 @@ module.exports = class CommunicatorEvents extends EventEmitter {
     this.communicator.connected = false;
     this.emit('disconnected');
 
-    if (!this.reconnect) return;
+    if (!this.communicator.reconnect) return;
     const check = await this.communicator.client.authenticator.checkToken();
-    if (check.tokenValid) this.stream.connect();
+    if (check.tokenValid) this.communicator.stream.connect();
     else if (!check.tokenValid) this.emit('reconnect', check);
   }
 
