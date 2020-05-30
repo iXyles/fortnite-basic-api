@@ -288,7 +288,7 @@ module.exports = class Authenticator extends EventEmitter {
 
     if (login && login.error) return login;
 
-    const exchange = await this.client.requester.sendGet(false, Endpoints.API_EXCHANGE_CODE,
+    const exchange = await this.client.requester.sendPost(false, Endpoints.API_EXCHANGE_CODE,
       undefined, undefined, { 'x-xsrf-token': this.xsrf.value }, false);
 
     const exchangeData = {

@@ -3,7 +3,7 @@ module.exports = Object.freeze({
   // NEW LOGINS
   CSRF_TOKEN: 'https://www.epicgames.com/id/api/csrf',
   API_LOGIN: 'https://www.epicgames.com/id/api/login',
-  API_EXCHANGE_CODE: 'https://www.epicgames.com/id/api/exchange',
+  API_EXCHANGE_CODE: 'https://www.epicgames.com/id/api/exchange/generate',
   API_REPUTATION: 'https://www.epicgames.com/id/api/reputation',
 
   // LOGIN
