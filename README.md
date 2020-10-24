@@ -12,9 +12,7 @@ Inspired by other repos about Fortnite API's as:
 - https://github.com/qlaffont/fortnite-api
 
 Which I previously used fortnite-api but have gotten issues with unhandledrejections which causing issues in other projects. Therefore I rebuilt with focus on Async/await to resolve the issues and adding support for V2 API endpoint.
-
-# BREAKING CHANGES
-From v1.5 backward compatibility methods & ways of doing things has been removed. Check the examples how to use it properly.
+If you've a question feel free to create an issue - PS: No I'll not add party support. If you may want that sort of functionallity look into - https://www.npmjs.com/package/fnbr instead :)
 
 - Generate device id from exchange example: https://github.com/iXyles/fortnite-basic-api/blob/master/example-test/generatedeviceauth.js 
 - Login with regular creds and use device auth example: https://github.com/iXyles/fortnite-basic-api/blob/master/example-test/deviceauth.js 
