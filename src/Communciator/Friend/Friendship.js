@@ -83,13 +83,17 @@ module.exports = class Friendship {
       const ids = friends.map((friend) => friend.accountId);
       if (ids.length === 0) return [];
       const profiles = {};
-      (await this.client.lookup.accountLookup(ids)).forEach((profile) => {
-        profiles[profile.id] = {
-          displayName: profile.displayName,
-          externalAuths: profile.externalAuths,
-        };
-      });
 
+      const requestProfiles = await this.client.lookup.accountLookup(ids);
+      if (!requestProfiles.error) {
+        requestProfiles.forEach((profile) => {
+          profiles[profile.id] = {
+            displayName: profile.displayName,
+            externalAuths: profile.externalAuths,
+          };
+        });
+      }
+      
       friends = friends.map((friend) => {
         if (profiles[friend.accountId]) return Object.assign(friend, profiles[friend.accountId]);
         return null;
